@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class UsuarioResponseDTO {
-    private Byte id;
+    private Long id;
     private String dni;
     private String nombreCompleto;
     private String username;

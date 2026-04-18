@@ -2,7 +2,8 @@ package com.clinica.controllers;
 
 import com.clinica.dtos.UsuarioRequestDTO;
 import com.clinica.dtos.UsuarioResponseDTO;
-import com.clinica.services.administracion.UsuarioService;
+import com.clinica.services.UsuarioService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Byte id) {
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         usuarioService.eliminarLogico(id);
         return ResponseEntity.noContent().build();
     }

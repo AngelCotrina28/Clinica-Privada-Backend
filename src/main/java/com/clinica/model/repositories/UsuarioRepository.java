@@ -8,9 +8,9 @@ import com.clinica.model.entities.Usuario;
 import java.util.Optional;
 
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Byte> {
-    Optional<Usuario> findByUsuario(String usuario);
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+    Optional<Usuario> findByUsername(String username);
     boolean existsByDni(String dni);
     boolean existsByEmail(String email);
-    boolean existsByUsuario(String usuario);
+    boolean existsByUsername(String username);
 }

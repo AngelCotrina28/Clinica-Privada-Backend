@@ -1,4 +1,4 @@
-package com.clinica.controllers;
+package com.clinica.exceptions;
 
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
     /** Operación inválida sobre inactivo → 422 */
     @ExceptionHandler(MedicamentoInactivoException.class)
     public ResponseEntity<Map<String, Object>> handleInactivo(MedicamentoInactivoException ex) {
-        return buildError(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), null);
+        return buildError(HttpStatusCode.valueOf(422), ex.getMessage(), null); // ✅ sin deprecated
     }
 
     /** Cualquier otro error no controlado → 500 */
@@ -45,13 +45,14 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", null);
     }
 
+    // ✅ Ahora acepta HttpStatusCode en vez de HttpStatus
     private ResponseEntity<Map<String, Object>> buildError(
-            HttpStatus status, String mensaje, Object detalle) {
+            HttpStatusCode status, String mensaje, Object detalle) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status",  status.value());
-        body.put("error",   status.getReasonPhrase());
-        body.put("mensaje", mensaje);
+        body.put("status",    status.value());
+        body.put("error",     status instanceof HttpStatus hs ? hs.getReasonPhrase() : "Error");
+        body.put("mensaje",   mensaje);
         if (detalle != null) body.put("detalle", detalle);
         return ResponseEntity.status(status).body(body);
     }

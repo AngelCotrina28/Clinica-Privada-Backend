@@ -33,11 +33,11 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return usuarioStr -> {
-            var usuario = usuarioRepository.findByUsuario(usuarioStr)
+            var usuario = usuarioRepository.findByUsername(usuarioStr)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + usuarioStr));
 
             return new User(
-                usuario.getUsuario(),
+                usuario.getUsername(),
                 usuario.getPasswordHash(),
                 usuario.isActivo(),
                 true, true, true,
@@ -56,10 +56,8 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // rutas públicas
-                .anyRequest().authenticated()
+                .anyRequest().permitAll() // ✅ permite todo temporalmente para probar
             );
-
         return http.build();
     }
 }

@@ -26,5 +26,5 @@ public class UsuarioRequestDTO {
     private String password;
 
     @NotNull(message = "Debe asignar un ID de rol")
-    private Byte rolId;
+    private Long rolId;
 }
