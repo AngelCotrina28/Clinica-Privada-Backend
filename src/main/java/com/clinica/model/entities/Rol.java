@@ -1,4 +1,4 @@
-package com.clinica.backend.entities;
+package com.clinica.model.entities;
 
 import jakarta.persistence.*;
 import lombok.*;

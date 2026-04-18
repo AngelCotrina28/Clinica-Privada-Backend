@@ -1,8 +1,9 @@
-package com.clinica.backend.repositories;
+package com.clinica.model.repositories;
 
-import com.clinica.backend.entities.CategoriaMedicamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.clinica.model.entities.CategoriaMedicamento;
 
 @Repository
 public interface CategoriaMedicamentoRepository extends JpaRepository<CategoriaMedicamento, Integer> { }

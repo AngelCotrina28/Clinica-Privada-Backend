@@ -1,4 +1,4 @@
-package com.clinica.backend.dtos;
+package com.clinica.dtos;
 
 import jakarta.validation.constraints.*;
 import lombok.*;
