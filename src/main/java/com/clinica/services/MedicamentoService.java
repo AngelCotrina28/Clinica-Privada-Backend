@@ -1,9 +1,26 @@
 package com.clinica.services;
 
-import com.clinica.controllers.*;
-import com.clinica.dtos.*;
-import com.clinica.model.entities.*;
-import com.clinica.model.repositories.*;
+import com.clinica.dtos.MedicamentoRequestDTO;
+import com.clinica.dtos.MedicamentoResponseDTO;
+import com.clinica.dtos.PageResponseDTO;
+
+import com.clinica.model.entities.CategoriaMedicamento;
+import com.clinica.model.entities.HistorialMedicamento;
+import com.clinica.model.entities.Medicamento;
+import com.clinica.model.entities.Usuario;
+
+
+import com.clinica.mappers.MedicamentoMapper;
+import com.clinica.model.repositories.CategoriaMedicamentoRepository;
+import com.clinica.model.repositories.HistorialMedicamentoRepository;
+import com.clinica.model.repositories.MedicamentoRepository;
+import com.clinica.model.repositories.UsuarioRepository;
+
+import com.clinica.exceptions.CodigoDuplicadoException;
+import com.clinica.exceptions.MedicamentoInactivoException;
+import com.clinica.exceptions.RecursoNoEncontradoException;
+
+
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,8 +76,7 @@ public class MedicamentoService {
     public MedicamentoResponseDTO registrar(MedicamentoRequestDTO dto) {
         // Regla: código único
         if (medicamentoRepo.existsByCodigo(dto.getCodigo())) {
-            throw new CodigoDuplicadoException(
-                    "Ya existe un medicamento con el código: " + dto.getCodigo());
+            throw new CodigoDuplicadoException("Ya existe un medicamento con el código: " + dto.getCodigo());
         }
 
         CategoriaMedicamento categoria = obtenerCategoria(dto.getCategoriaId());
@@ -87,7 +103,7 @@ public class MedicamentoService {
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.CREACION,
                 null, null, null);
 
-        log.info("Medicamento registrado: {} por usuario {}", medicamento.getCodigo(), usuarioActual.getUsuario());
+        log.info("Medicamento registrado: {} por usuario {}", medicamento.getCodigo(), usuarioActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -132,7 +148,7 @@ public class MedicamentoService {
         medicamento.setUpdatedBy(usuarioActual);
 
         medicamento = medicamentoRepo.save(medicamento);
-        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), usuarioActual.getUsuario());
+        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), usuarioActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -205,7 +221,7 @@ public class MedicamentoService {
 
     private Usuario getUsuarioAutenticado() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepo.findByUsuario(username)
+        return usuarioRepo.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
     }
 

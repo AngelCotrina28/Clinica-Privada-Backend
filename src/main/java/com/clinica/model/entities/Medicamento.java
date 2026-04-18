@@ -59,17 +59,21 @@ public class Medicamento {
     /** Regla: stock >= 0 y entero */
     @Min(value = 0, message = "El stock inicial debe ser mayor o igual a 0")
     @Column(name = "stock_actual", nullable = false)
+    @Builder.Default
     private Integer stockActual = 0;
 
     @Min(value = 0, message = "El stock mínimo debe ser mayor o igual a 0")
     @Column(name = "stock_minimo", nullable = false)
+    @Builder.Default
     private Integer stockMinimo = 0;
     
     @Column(name = "requiere_receta", nullable = false)
+    @Builder.Default
     private boolean requiereReceta = false;
 
     /** Soft-delete: activo/inactivo */
     @Column(nullable = false)
+    @Builder.Default
     private boolean activo = true;
 
     @ManyToOne(fetch = FetchType.LAZY)

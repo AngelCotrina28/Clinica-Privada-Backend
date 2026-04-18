@@ -1,4 +1,4 @@
-package com.clinica.services.administracion;
+package com.clinica.services;
 
 import com.clinica.dtos.UsuarioRequestDTO;
 import com.clinica.dtos.UsuarioResponseDTO;
@@ -39,7 +39,7 @@ public class UsuarioService {
         Usuario usuario = Usuario.builder()
                 .dni(dto.getDni())
                 .nombreCompleto(dto.getNombreCompleto())
-                .usuario(dto.getUsername())
+                .username(dto.getUsername())
                 .email(dto.getEmail())
                 // CA3: Guardar contraseña encriptada
                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
@@ -53,7 +53,7 @@ public class UsuarioService {
 
     // CA4: Eliminación lógica
     @Transactional
-    public void eliminarLogico(Byte id) {
+    public void eliminarLogico(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         usuario.setActivo(false);
@@ -71,7 +71,7 @@ public class UsuarioService {
                 .id(u.getId())
                 .dni(u.getDni())
                 .nombreCompleto(u.getNombreCompleto())
-                .username(u.getUsuario())
+                .username(u.getUsername())
                 .email(u.getEmail())
                 .nombreRol(u.getRol().getNombre())
                 .activo(u.isActivo())
