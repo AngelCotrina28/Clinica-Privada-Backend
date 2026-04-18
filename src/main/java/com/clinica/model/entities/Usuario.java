@@ -1,4 +1,4 @@
-package com.clinica.backend.entities;
+package com.clinica.model.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,10 +13,10 @@ public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private byte id;
 
     @Column(nullable = false, unique = true, length = 60)
-    private String username;
+    private String usuario;
 
     @Column(name = "password_hash", nullable = false, length = 30)
     private String passwordHash;
@@ -24,7 +24,7 @@ public class Usuario {
     @Column(name = "nombre_completo", nullable = false, length = 50)
     private String nombreCompleto;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(name = "email", nullable = false, unique = true, length = 50)
     private String email;
 
     @ManyToOne(fetch = FetchType.EAGER)

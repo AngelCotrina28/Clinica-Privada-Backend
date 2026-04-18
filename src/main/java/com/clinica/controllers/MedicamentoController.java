@@ -1,7 +1,8 @@
-package com.clinica.backend.controllers;
+package com.clinica.controllers;
 
-import com.clinica.backend.dtos.*;
-import com.clinica.backend.services.MedicamentoService;
+import com.clinica.dtos.*;
+import com.clinica.services.MedicamentoService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

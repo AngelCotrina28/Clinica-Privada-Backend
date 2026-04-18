@@ -1,9 +1,10 @@
-package com.clinica.backend.services;
+package com.clinica.services;
 
-import com.clinica.backend.entities.*;
-import com.clinica.backend.dtos.*;
-import com.clinica.backend.controllers.*;
-import com.clinica.backend.repositories.*;
+import com.clinica.controllers.*;
+import com.clinica.dtos.*;
+import com.clinica.model.entities.*;
+import com.clinica.model.repositories.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -86,7 +87,7 @@ public class MedicamentoService {
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.CREACION,
                 null, null, null);
 
-        log.info("Medicamento registrado: {} por usuario {}", medicamento.getCodigo(), usuarioActual.getUsername());
+        log.info("Medicamento registrado: {} por usuario {}", medicamento.getCodigo(), usuarioActual.getUsuario());
         return mapper.toResponse(medicamento);
     }
 
@@ -131,7 +132,7 @@ public class MedicamentoService {
         medicamento.setUpdatedBy(usuarioActual);
 
         medicamento = medicamentoRepo.save(medicamento);
-        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), usuarioActual.getUsername());
+        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), usuarioActual.getUsuario());
         return mapper.toResponse(medicamento);
     }
 

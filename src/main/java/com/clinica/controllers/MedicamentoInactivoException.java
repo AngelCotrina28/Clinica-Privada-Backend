@@ -1,4 +1,4 @@
-package com.clinica.backend.controllers;
+package com.clinica.controllers;
 
 public class MedicamentoInactivoException extends RuntimeException {
     public MedicamentoInactivoException(String msg) { super(msg); }

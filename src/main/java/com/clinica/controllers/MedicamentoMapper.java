@@ -1,7 +1,8 @@
-package com.clinica.backend.controllers;
+package com.clinica.controllers;
 
-import com.clinica.backend.entities.Medicamento;
-import com.clinica.backend.dtos.MedicamentoResponseDTO;
+import com.clinica.dtos.MedicamentoResponseDTO;
+import com.clinica.model.entities.Medicamento;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,7 +24,7 @@ public class MedicamentoMapper {
                 .stockMinimo(m.getStockMinimo())
                 .requiereReceta(m.isRequiereReceta())
                 .activo(m.isActivo())
-                .creadoPor(m.getCreatedBy() != null ? m.getCreatedBy().getUsername() : null)
+                .creadoPor(m.getCreatedBy() != null ? m.getCreatedBy().getUsuario() : null)
                 .createdAt(m.getCreatedAt())
                 .updatedAt(m.getUpdatedAt())
                 .build();

@@ -1,4 +1,4 @@
-package com.clinica.backend.controllers;
+package com.clinica.controllers;
 
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
