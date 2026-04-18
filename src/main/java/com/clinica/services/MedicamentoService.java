@@ -205,7 +205,7 @@ public class MedicamentoService {
 
     private Usuario getUsuarioAutenticado() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepo.findByUsername(username)
+        return usuarioRepo.findByUsuario(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
     }
 

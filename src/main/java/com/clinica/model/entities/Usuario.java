@@ -15,10 +15,13 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private byte id;
 
-    @Column(nullable = false, unique = true, length = 60)
+    @Column(name = "dni", nullable = false, unique = true, length = 9)
+    private String dni;
+
+    @Column(name = "usuario", nullable = false, unique = true, length = 60)
     private String usuario;
 
-    @Column(name = "password_hash", nullable = false, length = 30)
+    @Column(name = "password_hash", nullable = false, length = 60)
     private String passwordHash;
 
     @Column(name = "nombre_completo", nullable = false, length = 50)
