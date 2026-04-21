@@ -53,7 +53,7 @@ public class UsuarioService {
 
     // CA4: Eliminación lógica
     @Transactional
-    public void eliminarLogico(Long id) {
+    public void eliminarLogico(Byte id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         usuario.setActivo(false);
