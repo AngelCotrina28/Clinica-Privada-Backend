@@ -13,25 +13,33 @@ public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private byte id;
+    private Long id;
+
+    // NUEVO: Agregamos el DNI, obligatorio y de 8 caracteres
+    @Column(nullable = false, unique = true, length = 8)
+    private String dni;
 
     @Column(nullable = false, unique = true, length = 60)
-    private String usuario;
+    private String username;
 
-    @Column(name = "password_hash", nullable = false, length = 30)
+    // MODIFICADO: Aumentamos la longitud a 255 para evitar errores 
+    // cuando implementemos la encriptación de contraseñas más adelante.
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "nombre_completo", nullable = false, length = 50)
+    @Column(name = "nombre_completo", nullable = false, length = 100)
     private String nombreCompleto;
 
-    @Column(name = "email", nullable = false, unique = true, length = 50)
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
 
+    // SE MANTIENE: Este campo es la clave para la "eliminación lógica" que pide el Excel
     @Column(nullable = false)
+    @Builder.Default
     private boolean activo = true;
 
     @CreationTimestamp
