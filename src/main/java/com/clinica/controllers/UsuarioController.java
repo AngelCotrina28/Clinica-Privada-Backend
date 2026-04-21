@@ -30,7 +30,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminar(@PathVariable Byte id) {
         usuarioService.eliminarLogico(id);
         return ResponseEntity.noContent().build();
     }
