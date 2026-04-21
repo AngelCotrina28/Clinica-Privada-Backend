@@ -1,4 +1,4 @@
-package com.clinica.controllers;
+package com.clinica.mappers;
 
 import com.clinica.dtos.MedicamentoResponseDTO;
 import com.clinica.model.entities.Medicamento;
@@ -24,7 +24,7 @@ public class MedicamentoMapper {
                 .stockMinimo(m.getStockMinimo())
                 .requiereReceta(m.isRequiereReceta())
                 .activo(m.isActivo())
-                .creadoPor(m.getCreatedBy() != null ? m.getCreatedBy().getUsuario() : null)
+                .creadoPor(m.getCreatedBy() != null ? m.getCreatedBy().getUsername() : null)
                 .createdAt(m.getCreatedAt())
                 .updatedAt(m.getUpdatedAt())
                 .build();

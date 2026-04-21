@@ -38,6 +38,7 @@ public class HistorialMedicamento {
     private Usuario usuario;
 
     @Column(name = "fecha_operacion", nullable = false)
+    @Builder.Default
     private LocalDateTime fechaOperacion = LocalDateTime.now();
 
     @Column(name = "ip_origen", length = 45)

@@ -49,7 +49,8 @@ public class MedicamentoRequestDTO {
     private Integer stockInicial;
 
     @Min(value = 0, message = "El stock mínimo debe ser mayor o igual a 0")
+    @Builder.Default
     private Integer stockMinimo = 0;
 
-    private boolean requiereReceta = false;
+    private boolean requiereReceta;
 }
