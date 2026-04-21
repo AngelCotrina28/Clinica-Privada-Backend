@@ -8,6 +8,6 @@ import com.clinica.model.entities.Usuario;
 import java.util.Optional;
 
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface UsuarioRepository extends JpaRepository<Usuario, Byte> {
     Optional<Usuario> findByUsername(String username);
 }
