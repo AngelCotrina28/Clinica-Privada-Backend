@@ -1,6 +1,6 @@
 package com.clinica.config;
 
-import com.clinica.model.repositories.UsuarioRepository;
+import com.clinica.model.repositories.TrabajadorRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,10 +19,10 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    private final UsuarioRepository usuarioRepository;
+    private final TrabajadorRepository TrabajadorRepository;
 
-    public SecurityConfig(UsuarioRepository usuarioRepository) {
-        this.usuarioRepository = usuarioRepository;
+    public SecurityConfig(TrabajadorRepository TrabajadorRepository) {
+        this.TrabajadorRepository = TrabajadorRepository;
     }
 
     @Bean
@@ -32,16 +32,16 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return usuarioStr -> {
-            var usuario = usuarioRepository.findByUsername(usuarioStr)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + usuarioStr));
+        return TrabajadorStr -> {
+            var Trabajador = TrabajadorRepository.findByUsername(TrabajadorStr)
+                .orElseThrow(() -> new UsernameNotFoundException("Trabajador no encontrado: " + TrabajadorStr));
 
             return new User(
-                usuario.getUsername(),
-                usuario.getPasswordHash(),
-                usuario.isActivo(),
+                Trabajador.getUsername(),
+                Trabajador.getPasswordHash(),
+                Trabajador.isActivo(),
                 true, true, true,
-                List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().getNombre()))
+                List.of(new SimpleGrantedAuthority("ROLE_" + Trabajador.getRol().getNombre()))
             );
         };
     }

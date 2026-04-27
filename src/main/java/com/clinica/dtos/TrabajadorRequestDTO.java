@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 @Data
-public class UsuarioRequestDTO {
+public class TrabajadorRequestDTO {
     @NotBlank(message = "El DNI es obligatorio")
     @Size(min = 8, max = 8, message = "El DNI debe tener 8 dígitos")
     private String dni;

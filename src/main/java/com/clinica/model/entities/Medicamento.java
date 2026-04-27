@@ -78,11 +78,11 @@ public class Medicamento {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
-    private Usuario createdBy;
+    private Trabajador createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by")
-    private Usuario updatedBy;
+    private Trabajador updatedBy;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
