@@ -7,14 +7,14 @@ import com.clinica.dtos.PageResponseDTO;
 import com.clinica.model.entities.CategoriaMedicamento;
 import com.clinica.model.entities.HistorialMedicamento;
 import com.clinica.model.entities.Medicamento;
-import com.clinica.model.entities.Usuario;
+import com.clinica.model.entities.Trabajador;
 
 
 import com.clinica.mappers.MedicamentoMapper;
 import com.clinica.model.repositories.CategoriaMedicamentoRepository;
 import com.clinica.model.repositories.HistorialMedicamentoRepository;
 import com.clinica.model.repositories.MedicamentoRepository;
-import com.clinica.model.repositories.UsuarioRepository;
+import com.clinica.model.repositories.TrabajadorRepository;
 
 import com.clinica.exceptions.CodigoDuplicadoException;
 import com.clinica.exceptions.MedicamentoInactivoException;
@@ -39,7 +39,7 @@ public class MedicamentoService {
     private final MedicamentoRepository       medicamentoRepo;
     private final CategoriaMedicamentoRepository categoriaRepo;
     private final HistorialMedicamentoRepository historialRepo;
-    private final UsuarioRepository           usuarioRepo;
+    private final TrabajadorRepository           TrabajadorRepo;
     private final MedicamentoMapper           mapper;
 
     // ─── LISTAR / BUSCAR ─────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ public class MedicamentoService {
         }
 
         CategoriaMedicamento categoria = obtenerCategoria(dto.getCategoriaId());
-        Usuario usuarioActual = getUsuarioAutenticado();
+        Trabajador TrabajadorActual = getTrabajadorAutenticado();
 
         Medicamento medicamento = Medicamento.builder()
                 .codigo(dto.getCodigo())
@@ -95,7 +95,7 @@ public class MedicamentoService {
                 .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0)
                 .requiereReceta(dto.isRequiereReceta())
                 .activo(true)
-                .createdBy(usuarioActual)
+                .createdBy(TrabajadorActual)
                 .build();
 
         medicamento = medicamentoRepo.save(medicamento);
@@ -103,7 +103,7 @@ public class MedicamentoService {
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.CREACION,
                 null, null, null);
 
-        log.info("Medicamento registrado: {} por usuario {}", medicamento.getCodigo(), usuarioActual.getUsername());
+        log.info("Medicamento registrado: {} por Trabajador {}", medicamento.getCodigo(), TrabajadorActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -123,7 +123,7 @@ public class MedicamentoService {
                     "Ya existe otro medicamento con el código: " + dto.getCodigo());
         }
 
-        Usuario usuarioActual = getUsuarioAutenticado();
+        Trabajador TrabajadorActual = getTrabajadorAutenticado();
 
         // Auditoría campo a campo
         auditarCambio(medicamento, "precio_unitario",
@@ -145,10 +145,10 @@ public class MedicamentoService {
         medicamento.setStockActual(dto.getStockInicial());
         medicamento.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0);
         medicamento.setRequiereReceta(dto.isRequiereReceta());
-        medicamento.setUpdatedBy(usuarioActual);
+        medicamento.setUpdatedBy(TrabajadorActual);
 
         medicamento = medicamentoRepo.save(medicamento);
-        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), usuarioActual.getUsername());
+        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), TrabajadorActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -163,7 +163,7 @@ public class MedicamentoService {
         }
 
         medicamento.setActivo(false);
-        medicamento.setUpdatedBy(getUsuarioAutenticado());
+        medicamento.setUpdatedBy(getTrabajadorAutenticado());
         medicamento = medicamentoRepo.save(medicamento);
 
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.INACTIVACION,
@@ -184,7 +184,7 @@ public class MedicamentoService {
         }
 
         medicamento.setActivo(true);
-        medicamento.setUpdatedBy(getUsuarioAutenticado());
+        medicamento.setUpdatedBy(getTrabajadorAutenticado());
         medicamento = medicamentoRepo.save(medicamento);
 
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.ACTIVACION,
@@ -219,10 +219,10 @@ public class MedicamentoService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Categoría no encontrada: " + catId));
     }
 
-    private Usuario getUsuarioAutenticado() {
+    private Trabajador getTrabajadorAutenticado() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepo.findByUsername(username)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
+        return TrabajadorRepo.findByUsername(username)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Trabajador no encontrado: " + username));
     }
 
     private void registrarHistorial(Medicamento med,
@@ -234,7 +234,7 @@ public class MedicamentoService {
                 .campoModificado(campo)
                 .valorAnterior(anterior)
                 .valorNuevo(nuevo)
-                .usuario(getUsuarioAutenticado())
+                .Trabajador(getTrabajadorAutenticado())
                 .build());
     }
 

@@ -31,7 +31,7 @@ public class MedicamentoController {
 
     private final MedicamentoService service;
 
-    // ── Consulta (cualquier usuario autenticado) ──────────────────────────────
+    // ── Consulta (cualquier Trabajador autenticado) ──────────────────────────────
 
     @GetMapping("/medicamentos")
     public ResponseEntity<PageResponseDTO<MedicamentoResponseDTO>> buscar(

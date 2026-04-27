@@ -3,14 +3,17 @@ package com.clinica.model.repositories;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.clinica.model.entities.Usuario;
+import com.clinica.model.entities.Trabajador;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Byte> {
-    Optional<Usuario> findByUsername(String username);
+public interface TrabajadorRepository extends JpaRepository<Trabajador, Byte> {
+    Optional<Trabajador> findByUsername(String username);
     boolean existsByDni(String dni);
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
+    List<Trabajador> findAllByActivoTrue();
+    
 }

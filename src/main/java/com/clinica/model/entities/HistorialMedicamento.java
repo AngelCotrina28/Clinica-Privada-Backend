@@ -34,8 +34,8 @@ public class HistorialMedicamento {
     private String valorNuevo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    @JoinColumn(name = "Trabajador_id", nullable = false)
+    private Trabajador Trabajador;
 
     @Column(name = "fecha_operacion", nullable = false)
     @Builder.Default
