@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -54,6 +56,21 @@ public class Trabajador {
         foreignKey = @ForeignKey(name = "fk_trabajadores_rol") // Nombre personalizado para la FK
     )
     private Rol rol;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "trabajador_especialidades", // Nombre de la tabla intermedia
+        joinColumns = @JoinColumn(
+            name = "trabajador_id",
+            foreignKey = @ForeignKey(name = "fk_trab_esp_trabajador") // Nombre de la FK hacia Trabajador
+        ),
+        inverseJoinColumns = @JoinColumn(
+            name = "especialidad_id",
+            foreignKey = @ForeignKey(name = "fk_trab_esp_especialidad") // Nombre de la FK hacia Especialidad
+        )
+    )
+    @Builder.Default
+    private Set<Especialidad> especialidades = new HashSet<>();
 
     @Column(nullable = false)
     @Builder.Default

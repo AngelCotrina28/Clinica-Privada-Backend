@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -27,4 +28,7 @@ public class TrabajadorResponseDTO {
     private String nombreRol;
     
     private boolean activo;
+
+    // Devolverá algo como: ["Cardiología", "Pediatría"]
+    private List<String> especialidades;
 }

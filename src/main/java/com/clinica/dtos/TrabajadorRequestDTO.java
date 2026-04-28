@@ -3,6 +3,7 @@ package com.clinica.dtos;
 import lombok.Data;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class TrabajadorRequestDTO {
@@ -33,4 +34,6 @@ public class TrabajadorRequestDTO {
     private LocalDate fechaNacimiento;
 
     private String colegiatura;
+
+    private List<Long> especialidadesIds;
 }
