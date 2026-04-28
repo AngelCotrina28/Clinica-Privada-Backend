@@ -6,6 +6,8 @@ import com.clinica.services.TrabajadorService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,8 +22,8 @@ public class TrabajadorController {
     private final TrabajadorService trabajadorService;
 
     @PostMapping
-    public ResponseEntity<TrabajadorResponseDTO> registrar(@Valid @RequestBody TrabajadorRequestDTO dto) {
-        return ResponseEntity.ok(trabajadorService.registrar(dto));
+    public ResponseEntity<TrabajadorResponseDTO> crear(@RequestBody TrabajadorRequestDTO request) {
+        return new ResponseEntity<>(trabajadorService.crear(request), HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -29,9 +31,14 @@ public class TrabajadorController {
         return ResponseEntity.ok(trabajadorService.listarTodos());
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Byte id) {
-        trabajadorService.eliminarLogico(id);
+    @PutMapping("/{id}")
+    public ResponseEntity<TrabajadorResponseDTO> actualizar(@PathVariable Byte id, @RequestBody TrabajadorRequestDTO request) {
+        return ResponseEntity.ok(trabajadorService.actualizar(id, request));
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Void> cambiarEstado(@PathVariable Byte id) {
+        trabajadorService.cambiarEstado(id);
         return ResponseEntity.noContent().build();
     }
 }
