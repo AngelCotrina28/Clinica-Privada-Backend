@@ -4,7 +4,6 @@ import com.clinica.dtos.TrabajadorRequestDTO;
 import com.clinica.dtos.TrabajadorResponseDTO;
 import com.clinica.services.TrabajadorService;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
