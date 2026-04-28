@@ -2,8 +2,10 @@ package com.clinica.services;
 
 import com.clinica.dtos.TrabajadorRequestDTO;
 import com.clinica.dtos.TrabajadorResponseDTO;
+import com.clinica.model.entities.Especialidad;
 import com.clinica.model.entities.Rol;
 import com.clinica.model.entities.Trabajador;
+import com.clinica.model.repositories.EspecialidadRepository;
 import com.clinica.model.repositories.RolRepository;
 import com.clinica.model.repositories.TrabajadorRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,13 +13,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TrabajadorService {
 
+    private final EspecialidadRepository especialidadRepository;
     private final TrabajadorRepository trabajadorRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
@@ -41,6 +46,11 @@ public class TrabajadorService {
             }
         }
 
+        Set<Especialidad> especialidades = new java.util.HashSet<>();
+        if (rol.getNombre().equalsIgnoreCase("Médico") && dto.getEspecialidadesIds() != null && !dto.getEspecialidadesIds().isEmpty()) {
+            especialidades = new java.util.HashSet<>(especialidadRepository.findAllById(dto.getEspecialidadesIds()));
+        }
+
         Trabajador trabajador = Trabajador.builder()
                 .dni(dto.getDni())
                 .nombreCompleto(dto.getNombreCompleto())
@@ -53,6 +63,7 @@ public class TrabajadorService {
                 .telefono(dto.getTelefono())
                 .fechaNacimiento(dto.getFechaNacimiento())
                 .colegiatura(dto.getColegiatura())
+                .especialidades(especialidades)
                 .build();
 
         trabajador = trabajadorRepository.save(trabajador);
@@ -85,6 +96,10 @@ public class TrabajadorService {
     }
 
     private TrabajadorResponseDTO mapToDTO(Trabajador trabajador) {
+        List<String> especialidadesNombres = trabajador.getEspecialidades() != null 
+            ? trabajador.getEspecialidades().stream().map(Especialidad::getNombre).collect(Collectors.toList())
+            : new ArrayList<>()
+            ;
         return TrabajadorResponseDTO.builder()
                 .id(trabajador.getId())
                 .dni(trabajador.getDni())
@@ -97,6 +112,7 @@ public class TrabajadorService {
                 .rolId(trabajador.getRol().getId())
                 .nombreRol(trabajador.getRol().getNombre())
                 .activo(trabajador.isActivo())
+                .especialidades(especialidadesNombres)
                 .build();
     }
 
