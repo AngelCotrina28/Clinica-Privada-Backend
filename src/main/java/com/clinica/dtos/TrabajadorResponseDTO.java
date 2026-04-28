@@ -23,7 +23,8 @@ public class TrabajadorResponseDTO {
     private String colegiatura;
     
     // Solo enviamos el nombre del rol (ej. "Médico"), no todo el objeto Rol
-    private String nombreRol; 
+    private Long rolId; 
+    private String nombreRol;
     
     private boolean activo;
 }

@@ -31,13 +31,21 @@ public class TrabajadorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TrabajadorResponseDTO> actualizar(@PathVariable Byte id, @RequestBody TrabajadorRequestDTO request) {
+    public ResponseEntity<TrabajadorResponseDTO> actualizar(@PathVariable Long id, @RequestBody TrabajadorRequestDTO request) {
         return ResponseEntity.ok(trabajadorService.actualizar(id, request));
     }
 
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<Void> cambiarEstado(@PathVariable Byte id) {
+    public ResponseEntity<Void> cambiarEstado(@PathVariable Long id) {
         trabajadorService.cambiarEstado(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ====================================================================
+    // ENDPOINT PARA FUTURAS HISTORIAS: GET /api/trabajadores/medicos/activos
+    // ====================================================================
+    @GetMapping("/medicos/activos")
+    public ResponseEntity<List<TrabajadorResponseDTO>> listarMedicosActivos() {
+        return ResponseEntity.ok(trabajadorService.listarMedicosActivos());
     }
 }
