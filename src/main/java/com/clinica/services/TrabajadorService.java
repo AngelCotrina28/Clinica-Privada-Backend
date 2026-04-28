@@ -34,6 +34,12 @@ public class TrabajadorService {
 
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+        
+        if (rol.getNombre().equalsIgnoreCase("Médico")) {
+            if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
+                throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
+            }
+        }
 
         Trabajador trabajador = Trabajador.builder()
                 .dni(dto.getDni())
@@ -54,7 +60,7 @@ public class TrabajadorService {
     }
 
     @Transactional
-    public void cambiarEstado(Byte id) {
+    public void cambiarEstado(Long id) {
         Trabajador trabajador = trabajadorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
         
@@ -71,6 +77,13 @@ public class TrabajadorService {
                 .collect(Collectors.toList());
     }
 
+    public List<TrabajadorResponseDTO> listarMedicosActivos() {
+        // Buscamos ignorando mayúsculas/minúsculas para evitar errores tipográficos en BD
+        return trabajadorRepository.findByRolNombreIgnoreCaseAndActivoTrue("MEDICO").stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
     private TrabajadorResponseDTO mapToDTO(Trabajador trabajador) {
         return TrabajadorResponseDTO.builder()
                 .id(trabajador.getId())
@@ -81,13 +94,15 @@ public class TrabajadorService {
                 .telefono(trabajador.getTelefono()) 
                 .fechaNacimiento(trabajador.getFechaNacimiento()) 
                 .colegiatura(trabajador.getColegiatura()) 
+                .rolId(trabajador.getRol().getId())
                 .nombreRol(trabajador.getRol().getNombre())
                 .activo(trabajador.isActivo())
                 .build();
     }
 
     @Transactional
-    public TrabajadorResponseDTO actualizar(Byte id, TrabajadorRequestDTO dto) {
+    public TrabajadorResponseDTO actualizar(Long id, TrabajadorRequestDTO dto) {
+
         Trabajador trabajador = trabajadorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
 
@@ -104,10 +119,15 @@ public class TrabajadorService {
         trabajador.setTelefono(dto.getTelefono());
         trabajador.setFechaNacimiento(dto.getFechaNacimiento());
         trabajador.setColegiatura(dto.getColegiatura());
-        
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         trabajador.setRol(rol);
+
+        if (rol.getNombre().equalsIgnoreCase("Médico")) {
+            if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
+                throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
+            }
+        }
 
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             trabajador.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
