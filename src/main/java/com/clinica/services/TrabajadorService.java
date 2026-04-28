@@ -23,12 +23,11 @@ public class TrabajadorService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public TrabajadorResponseDTO registrar(TrabajadorRequestDTO dto) {
-        // CA2: Validar correo único
+    public TrabajadorResponseDTO crear(TrabajadorRequestDTO dto) {
+        // Validaciones de unicidad
         if (trabajadorRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("El correo ya está registrado");
         }
-        // Validar DNI único
         if (trabajadorRepository.existsByDni(dto.getDni())) {
             throw new RuntimeException("El DNI ya está registrado");
         }
@@ -41,27 +40,33 @@ public class TrabajadorService {
                 .nombreCompleto(dto.getNombreCompleto())
                 .username(dto.getUsername())
                 .email(dto.getEmail())
-                // CA3: Guardar contraseña encriptada
                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .rol(rol)
                 .activo(true)
+                // --- MAPEO DE NUEVOS CAMPOS ---
+                .telefono(dto.getTelefono())
+                .fechaNacimiento(dto.getFechaNacimiento())
+                .colegiatura(dto.getColegiatura())
                 .build();
 
         trabajador = trabajadorRepository.save(trabajador);
         return mapToDTO(trabajador);
     }
 
-    // CA4: Eliminación lógica
     @Transactional
-    public void eliminarLogico(Byte id) {
-        Trabajador Trabajador = trabajadorRepository.findById(id)
+    public void cambiarEstado(Byte id) {
+        Trabajador trabajador = trabajadorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
-        Trabajador.setActivo(false);
-        trabajadorRepository.save(Trabajador);
+        
+        // Si está en true lo pasa a false, y si está en false lo pasa a true
+        trabajador.setActivo(!trabajador.isActivo()); 
+        
+        trabajadorRepository.save(trabajador);
     }
 
     public List<TrabajadorResponseDTO> listarTodos() {
-        return trabajadorRepository.findAllByActivoTrue().stream()
+        // Volvemos a usar findAll()
+        return trabajadorRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -73,13 +78,41 @@ public class TrabajadorService {
                 .nombreCompleto(trabajador.getNombreCompleto())
                 .username(trabajador.getUsername())
                 .email(trabajador.getEmail())
-                // --- NUEVOS CAMPOS ---
                 .telefono(trabajador.getTelefono()) 
                 .fechaNacimiento(trabajador.getFechaNacimiento()) 
                 .colegiatura(trabajador.getColegiatura()) 
-                // ---------------------
-                .nombreRol(trabajador.getRol().getNombre()) // Obtenemos el String del rol
+                .nombreRol(trabajador.getRol().getNombre())
                 .activo(trabajador.isActivo())
                 .build();
+    }
+
+    @Transactional
+    public TrabajadorResponseDTO actualizar(Byte id, TrabajadorRequestDTO dto) {
+        Trabajador trabajador = trabajadorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
+
+        // Validar que el nuevo email no esté en uso por OTRO trabajador
+        if (!trabajador.getEmail().equals(dto.getEmail()) && trabajadorRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("El nuevo correo ya está en uso");
+        }
+
+        // --- APLICAR TODOS LOS CAMBIOS ---
+        trabajador.setDni(dto.getDni());
+        trabajador.setNombreCompleto(dto.getNombreCompleto());
+        trabajador.setUsername(dto.getUsername()); // Faltaba esto
+        trabajador.setEmail(dto.getEmail());
+        trabajador.setTelefono(dto.getTelefono());
+        trabajador.setFechaNacimiento(dto.getFechaNacimiento());
+        trabajador.setColegiatura(dto.getColegiatura());
+        
+        Rol rol = rolRepository.findById(dto.getRolId())
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+        trabajador.setRol(rol);
+
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            trabajador.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        return mapToDTO(trabajadorRepository.save(trabajador));
     }
 }

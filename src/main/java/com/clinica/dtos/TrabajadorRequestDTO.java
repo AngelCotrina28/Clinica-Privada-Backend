@@ -1,10 +1,8 @@
 package com.clinica.dtos;
 
 import lombok.Data;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+import java.time.LocalDate;
 
 @Data
 public class TrabajadorRequestDTO {
@@ -23,8 +21,16 @@ public class TrabajadorRequestDTO {
     private String email;
 
     @NotBlank(message = "La contraseña es obligatoria")
+    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
     private String password;
 
     @NotNull(message = "Debe asignar un ID de rol")
     private Long rolId;
+
+    // --- NUEVOS CAMPOS AGREGADOS ---
+    private String telefono;
+    
+    private LocalDate fechaNacimiento;
+
+    private String colegiatura;
 }
