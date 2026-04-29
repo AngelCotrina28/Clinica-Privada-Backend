@@ -40,14 +40,14 @@ public class TrabajadorService {
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         
-        if (rol.getNombre().equalsIgnoreCase("Médico")) {
+        if (rol.getNombre().equalsIgnoreCase("Medico")) {
             if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
                 throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
             }
         }
 
         Set<Especialidad> especialidades = new java.util.HashSet<>();
-        if (rol.getNombre().equalsIgnoreCase("Médico") && dto.getEspecialidadesIds() != null && !dto.getEspecialidadesIds().isEmpty()) {
+        if (rol.getNombre().equalsIgnoreCase("Medico") && dto.getEspecialidadesIds() != null && !dto.getEspecialidadesIds().isEmpty()) {
             especialidades = new java.util.HashSet<>(especialidadRepository.findAllById(dto.getEspecialidadesIds()));
         }
 
@@ -139,7 +139,7 @@ public class TrabajadorService {
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         trabajador.setRol(rol);
 
-        if (rol.getNombre().equalsIgnoreCase("Médico")) {
+        if (rol.getNombre().equalsIgnoreCase("Medico")) {
             if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
                 throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
             }
