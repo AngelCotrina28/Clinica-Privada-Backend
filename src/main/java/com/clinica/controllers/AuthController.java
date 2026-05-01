@@ -2,15 +2,17 @@ package com.clinica.controllers;
 
 import com.clinica.dtos.AuthLoginRequestDTO;
 import com.clinica.dtos.AuthLoginResponseDTO;
-import com.clinica.model.entities.Trabajador;
-import com.clinica.model.repositories.TrabajadorRepository;
-import com.clinica.services.JwtService;
+import com.clinica.services.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -18,29 +20,33 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
-    private final TrabajadorRepository trabajadorRepository;
+        private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @PostMapping("/login")
-    public ResponseEntity<AuthLoginResponseDTO> login(@RequestBody AuthLoginRequestDTO request) {
+        private final AuthService authService;
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-        Trabajador trabajador = trabajadorRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        @PostMapping("/login")
+        public ResponseEntity<?> login(@RequestBody AuthLoginRequestDTO request) {
+                logger.info("> Intento de login para el usuario: {}", request.getUsername());
 
-        String nombreRol = trabajador.getRol().getNombre();
+                try {
+                        return ResponseEntity.ok(authService.login(request));
 
-        String token = jwtService.generateToken(
-                new org.springframework.security.core.userdetails.User(
-                        trabajador.getUsername(),
-                        trabajador.getPasswordHash(),
-                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
-                                "ROLE_" + nombreRol))),
-                nombreRol);
+                } catch (DisabledException e) {
+                        // Leemos el mensaje exacto que le mandamos desde el AuthService
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                        .body(Map.of("mensaje", e.getMessage()));
 
-        AuthLoginResponseDTO response = new AuthLoginResponseDTO(token, trabajador.getUsername(), nombreRol);
-        return ResponseEntity.ok(response);
-    }
+                } catch (BadCredentialsException e) {
+                        // Leemos el mensaje exacto que le mandamos desde el AuthService
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                        .body(Map.of("mensaje", e.getMessage()));
+
+                } catch (Exception e) {
+                        // ¡Clave para futuros bugs! Imprime el error real en la consola de Spring Boot
+                        logger.error("Error crítico no controlado en login: ", e);
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body(Map.of("mensaje", "Error interno del servidor"));
+                }
+        }
+
 }
