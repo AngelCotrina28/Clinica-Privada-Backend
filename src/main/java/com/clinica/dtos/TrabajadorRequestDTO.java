@@ -28,11 +28,8 @@ public class TrabajadorRequestDTO {
     @NotNull(message = "Debe asignar un ID de rol")
     private Long rolId;
 
-    // --- NUEVOS CAMPOS AGREGADOS ---
     private String telefono;
-    
     private LocalDate fechaNacimiento;
-
     private String colegiatura;
 
     private List<Long> especialidadesIds;
