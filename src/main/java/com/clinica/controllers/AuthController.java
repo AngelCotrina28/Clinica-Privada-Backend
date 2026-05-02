@@ -1,7 +1,6 @@
 package com.clinica.controllers;
 
 import com.clinica.dtos.AuthLoginRequestDTO;
-import com.clinica.dtos.AuthLoginResponseDTO;
 import com.clinica.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
