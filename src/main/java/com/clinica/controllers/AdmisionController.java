@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
  * Controller REST — Módulo de Admisión y Consultas
  *
  * Endpoints:
- *  GET  /api/admision/historia?dni={dni}     → buscar historia por DNI
- *  POST /api/admision/historia               → abrir nueva historia clínica
- *  POST /api/admision/emergencia/orden       → generar orden de atención de emergencia
+ * GET /api/admision/historia?dni={dni} → buscar historia por DNI
+ * POST /api/admision/historia → abrir nueva historia clínica
+ * POST /api/admision/emergencia/orden → generar orden de atención de emergencia
  *
  * RBAC:
- *  - Abrir historia:  RECEPCIONISTA | ENFERMERO | ADMINISTRADOR | JEFE_ENFERMERIA
- *  - Generar orden:   JEFE_ENFERMERIA | ADMINISTRADOR
+ * - Abrir historia: RECEPCIONISTA | ENFERMERO | ADMINISTRADOR | JEFE_ENFERMERIA
+ * - Generar orden: JEFE_ENFERMERIA | ADMINISTRADOR
  */
 
 @RestController
@@ -26,9 +26,9 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class AdmisionController {
- 
+
     private final AdmisionService admisionService;
- 
+
     /**
      * Busca una historia clínica por DNI.
      * Todos los roles autenticados pueden consultar.
@@ -38,7 +38,17 @@ public class AdmisionController {
             @RequestParam String dni) {
         return ResponseEntity.ok(admisionService.buscarPorDni(dni));
     }
- 
+
+    /**
+     * Busca una historia clínica por Número de Historia (Ej: HC-00001).
+     * Todos los roles autenticados pueden consultar.
+     */
+    @GetMapping("/historia/numero")
+    public ResponseEntity<HistoriaClinicaResponseDTO> buscarHistoriaPorNumero(
+            @RequestParam String numeroHistoria) {
+        return ResponseEntity.ok(admisionService.buscarPorNumeroHistoria(numeroHistoria));
+    }
+
     /**
      * Abre una nueva Historia Clínica.
      *
@@ -55,7 +65,7 @@ public class AdmisionController {
         HistoriaClinicaResponseDTO response = admisionService.abrirHistoria(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
- 
+
     /**
      * Genera una Orden de Atención de Emergencia.
      *
