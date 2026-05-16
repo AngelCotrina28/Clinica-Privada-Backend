@@ -40,11 +40,18 @@ public class AuthController {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("mensaje", e.getMessage()));
 
+                } catch (IllegalStateException e) {
+                        logger.error("Configuracion invalida de usuario en login: {}", e.getMessage());
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                        .body(Map.of("mensaje", e.getMessage()));
+
                 } catch (Exception e) {
                         // ¡Clave para futuros bugs! Imprime el error real en la consola de Spring Boot
                         logger.error("Error crítico no controlado en login: ", e);
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(Map.of("mensaje", "Error interno del servidor"));
+                                        .body(Map.of(
+                                                        "mensaje", "Error interno en login",
+                                                        "detalle", e.getClass().getSimpleName() + ": " + e.getMessage()));
                 }
         }
 

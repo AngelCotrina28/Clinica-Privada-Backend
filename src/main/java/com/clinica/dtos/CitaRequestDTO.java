@@ -17,6 +17,7 @@ public class CitaRequestDTO {
     private Long medicoId;
     private LocalDateTime fechaHora;
     private String motivoConsulta; // Opcional
+    private Long turnoId;
 
     // Campos obligatorios por la BD (Los dejamos preparados)
     private Long consultorioId;
