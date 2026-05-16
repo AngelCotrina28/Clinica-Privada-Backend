@@ -94,14 +94,11 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-<<<<<<< HEAD
-=======
 		<dependency>
 			<groupId>io.github.cdimascio</groupId>
 			<artifactId>dotenv-java</artifactId>
 			<version>3.0.0</version>
 		</dependency>
->>>>>>> 493cebeb0b0735ed9444b44c5ee4385f742d73a5
 	</dependencies>
 
 	<build>
