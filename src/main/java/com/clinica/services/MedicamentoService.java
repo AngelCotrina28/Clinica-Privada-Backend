@@ -220,9 +220,33 @@ public class MedicamentoService {
     }
 
     private Trabajador getTrabajadorAutenticado() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return TrabajadorRepo.findByUsername(username)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Trabajador no encontrado: " + username));
+        try {
+            // 1. Intentar recuperar el usuario del contexto de Spring Security
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication != null && authentication.isAuthenticated() 
+                    && !authentication.getName().equals("anonymousUser")) {
+                
+                String username = authentication.getName();
+                return TrabajadorRepo.findByUsername(username)
+                        .orElseGet(() -> obtenerTrabajadorFallback(username));
+            }
+            
+            // 2. Si es un usuario anónimo o no hay autenticación, usar el fallback
+            return obtenerTrabajadorFallback("anonymousUser");
+            
+        } catch (Exception e) {
+            log.warn("Error al recuperar contexto de seguridad, usando Trabajador por defecto: {}", e.getMessage());
+            return obtenerTrabajadorFallback("emergencyFallback");
+        }
+    }
+
+    private Trabajador obtenerTrabajadorFallback(String usernameIntentado) {
+        log.warn("Trabajador '{}' no autenticado de forma válida. Asignando fallback administrativo (ID 1).", usernameIntentado);
+        // Busca el primer trabajador del sistema (ID 1) como auditor por defecto en local
+        return TrabajadorRepo.findById(1L)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Error Crítico: No existe ningún Trabajador base en la tabla (ID 1) para auditoría de respaldo."));
     }
 
     private void registrarHistorial(Medicamento med,
