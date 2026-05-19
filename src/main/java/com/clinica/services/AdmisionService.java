@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Servicio de Admisión y Consultas.
@@ -149,6 +153,17 @@ public class AdmisionService {
                 return toOrdenDTO(orden);
         }
 
+        @Transactional(readOnly = true)
+        public List<OrdenAtencionEmergenciaResponseDTO> obtenerOrdenesEmergenciaHoy() {
+                LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+                LocalDateTime finDia = LocalDate.now().atTime(LocalTime.MAX);
+
+                return ordenRepo.findByCreatedAtBetweenOrderByCreatedAtDesc(inicioDia, finDia)
+                                .stream()
+                                .map(this::toOrdenDTO)
+                                .collect(Collectors.toList());
+        }
+        
         // ── HELPERS PRIVADOS ─────────────────────────────────────────────────────
 
         /** Obtiene el Trabajador autenticado desde el SecurityContext */
