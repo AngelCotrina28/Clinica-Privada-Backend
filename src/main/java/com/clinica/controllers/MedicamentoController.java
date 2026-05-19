@@ -67,7 +67,7 @@ public class MedicamentoController {
     // ── Gestión (solo ADMIN) ─────────────────────────────────────────────────
 
     @PostMapping("/medicamentos")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<MedicamentoResponseDTO> registrar(
             @Valid @RequestBody MedicamentoRequestDTO dto) {
         MedicamentoResponseDTO response = service.registrar(dto);
@@ -75,7 +75,7 @@ public class MedicamentoController {
     }
 
     @PutMapping("/medicamentos/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<MedicamentoResponseDTO> editar(
             @PathVariable Long id,
             @Valid @RequestBody MedicamentoRequestDTO dto) {
@@ -83,19 +83,19 @@ public class MedicamentoController {
     }
 
     @PatchMapping("/medicamentos/{id}/inactivar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<MedicamentoResponseDTO> inactivar(@PathVariable Long id) {
         return ResponseEntity.ok(service.inactivar(id));
     }
 
     @PatchMapping("/medicamentos/{id}/activar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<MedicamentoResponseDTO> activar(@PathVariable Long id) {
         return ResponseEntity.ok(service.activar(id));
     }
 
     @GetMapping("/medicamentos/{id}/historial")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Page<?>> historial(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0")  int pagina,
