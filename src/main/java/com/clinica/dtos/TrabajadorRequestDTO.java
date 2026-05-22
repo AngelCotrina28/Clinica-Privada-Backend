@@ -14,10 +14,8 @@ public class TrabajadorRequestDTO {
     @NotBlank(message = "El nombre es obligatorio")
     private String nombreCompleto;
 
-    @NotBlank(message = "El username es obligatorio")
     private String username;
 
-    @NotBlank(message = "El correo es obligatorio")
     @Email(message = "El correo electrónico debe tener un formato válido")
     private String email;
 

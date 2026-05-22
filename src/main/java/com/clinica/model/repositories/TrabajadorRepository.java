@@ -14,6 +14,9 @@ public interface TrabajadorRepository extends JpaRepository<Trabajador, Long> {
     boolean existsByDni(String dni);
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
+    boolean existsByDniAndIdNot(String dni, Long id);
+    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsByUsernameAndIdNot(String username, Long id);
     List<Trabajador> findAllByActivoTrue();
     List<Trabajador> findByRolNombreIgnoreCaseAndActivoTrue(String nombreRol);
 }

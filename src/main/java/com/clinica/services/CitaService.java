@@ -3,6 +3,9 @@ package com.clinica.services;
 import com.clinica.dtos.CitaRequestDTO;
 import com.clinica.dtos.CitaResponseDTO;
 import com.clinica.dtos.DisponibilidadResponseDTO;
+import com.clinica.dtos.HorarioBloqueDTO;
+import com.clinica.dtos.TrabajadorResponseDTO;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CitaService {
@@ -10,6 +13,9 @@ public interface CitaService {
 
     List<CitaResponseDTO> listarCitas();
 
-    List<DisponibilidadResponseDTO> consultarDisponibilidad(Long medicoId,
-            java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin);
+    List<DisponibilidadResponseDTO> consultarDisponibilidad(Long medicoId, LocalDate fechaInicio, LocalDate fechaFin);
+
+    List<TrabajadorResponseDTO> listarMedicosPorEspecialidad(Long especialidadId);
+
+    List<HorarioBloqueDTO> obtenerDisponibilidad(Long medicoId, LocalDate fecha);
 }

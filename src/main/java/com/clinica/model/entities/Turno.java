@@ -3,6 +3,7 @@ package com.clinica.model.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
@@ -32,6 +33,9 @@ public class Turno {
 
     @Column(name = "hora_inicio", nullable = false)
     private LocalTime horaInicio;
+
+    @Column(name = "fecha")
+    private LocalDate fecha;
 
     @Column(name = "hora_fin", nullable = false)
     private LocalTime horaFin;

@@ -11,14 +11,21 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CitaRequestDTO {
-    // Los datos que vienen del frontend
-    private Long pacienteId;
-    private Long especialidadId;
+
+    // --- Identificadores del Paciente ---
+    private Long pacienteId;         
+    private Long historiaClinicaId; 
+
+    // --- Datos Generales de la Cita ---
+    private Long especialidadId;     
     private Long medicoId;
     private LocalDateTime fechaHora;
-    private String motivoConsulta;
+    private String motivoConsulta;   // Opcional
 
-    // Campos obligatorios por la BD
+    // --- Control de Horarios y Estructura BD ---
+    private Long turnoId;        
+
+    // --- Campos Obligatorios de Infraestructura ---
     private Long consultorioId;
     private Long tipoCitaId;
     private Long creadoPorId;

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 /**
  * Controller REST — Módulo de Admisión y Consultas
@@ -47,6 +48,13 @@ public class AdmisionController {
     public ResponseEntity<HistoriaClinicaResponseDTO> buscarHistoriaPorNumero(
             @RequestParam String numeroHistoria) {
         return ResponseEntity.ok(admisionService.buscarPorNumeroHistoria(numeroHistoria));
+    }
+
+    @GetMapping("/emergencia/ordenes/hoy")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA','ENFERMERO','ADMINISTRADOR','JEFE_ENFERMERIA')")
+    public ResponseEntity<List<OrdenAtencionEmergenciaResponseDTO>> obtenerOrdenesHoy() {
+        List<OrdenAtencionEmergenciaResponseDTO> ordenes = admisionService.obtenerOrdenesEmergenciaHoy();
+        return ResponseEntity.ok(ordenes);
     }
 
     /**
