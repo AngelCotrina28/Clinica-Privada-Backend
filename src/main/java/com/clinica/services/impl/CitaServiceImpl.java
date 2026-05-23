@@ -58,7 +58,14 @@ public class CitaServiceImpl implements CitaService {
         validarRequest(request);
 
         Trabajador creador = obtenerTrabajadorAutenticado(request.getCreadoPorId());
-        Paciente paciente = obtenerOCrearPacienteDesdeHistoria(request.getHistoriaClinicaId(), creador);
+
+        // 1. OBTENER LA HISTORIA CLÍNICA (NUEVO)
+        HistoriaClinica historia = historiaClinicaRepository.findById(request.getHistoriaClinicaId())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Historia clinica no encontrada con ID: " + request.getHistoriaClinicaId()));
+
+        // 2. Pasamos la entidad 'historia' directamente en lugar de solo el ID (requiere el ajuste del paso 2)
+        Paciente paciente = obtenerOCrearPacienteDesdeHistoria(historia, creador);
 
         Trabajador medico = trabajadorRepository.findById(request.getMedicoId())
                 .orElseThrow(() -> new RecursoNoEncontradoException(
@@ -86,6 +93,7 @@ public class CitaServiceImpl implements CitaService {
 
         Cita cita = Cita.builder()
                 .numeroCita(generarNumeroCita(request.getFechaHora()))
+                .historiaClinica(historia) // <--- LÍNEA CRÍTICA AÑADIDA
                 .paciente(paciente)
                 .medico(medico)
                 .consultorio(turno.getConsultorio())
@@ -178,17 +186,13 @@ public class CitaServiceImpl implements CitaService {
         return bloques;
     }
 
-    private Paciente obtenerOCrearPacienteDesdeHistoria(Long historiaClinicaId, Trabajador registrador) {
-        return pacienteRepository.findByHistoriaClinicaId(historiaClinicaId)
-                .orElseGet(() -> {
-                    HistoriaClinica historia = historiaClinicaRepository.findById(historiaClinicaId)
-                            .orElseThrow(() -> new RecursoNoEncontradoException(
-                                    "Historia clinica no encontrada con ID: " + historiaClinicaId));
-
-                    return pacienteRepository.findByDni(historia.getDniPaciente())
-                            .map(paciente -> vincularPacienteConHistoria(paciente, historia))
-                            .orElseGet(() -> crearPacienteDesdeHistoria(historia, registrador));
-                });
+    
+    private Paciente obtenerOCrearPacienteDesdeHistoria(HistoriaClinica historia, Trabajador registrador) {
+        return pacienteRepository.findByHistoriaClinicaId(historia.getId())
+                .orElseGet(() -> pacienteRepository.findByDni(historia.getDniPaciente())
+                        .map(paciente -> vincularPacienteConHistoria(paciente, historia))
+                        .orElseGet(() -> crearPacienteDesdeHistoria(historia, registrador))
+                );
     }
 
     private Paciente vincularPacienteConHistoria(Paciente paciente, HistoriaClinica historia) {

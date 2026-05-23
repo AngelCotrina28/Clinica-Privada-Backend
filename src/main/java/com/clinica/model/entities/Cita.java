@@ -35,6 +35,10 @@ public class Cita {
     @JoinColumn(name = "consultorio_id", nullable = false)
     private Consultorio consultorio;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "historia_clinica_id", nullable = false)
+    private HistoriaClinica historiaClinica;
+
     /** Turno origen de la cita (puede ser nulo si se agenda manualmente) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "turno_id")
