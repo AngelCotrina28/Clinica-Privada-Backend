@@ -1,7 +1,11 @@
 package com.clinica.model.repositories;
 
 import com.clinica.model.entities.OrdenAtencionEmergencia;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 
@@ -13,5 +17,24 @@ public interface OrdenAtencionEmergenciaRepository extends JpaRepository<OrdenAt
     List<OrdenAtencionEmergencia> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime inicio, LocalDateTime fin);
 
     List<OrdenAtencionEmergencia> findByHistoriaClinicaIdOrderByCreatedAtDesc(Long historiaClinicaId);
-}
 
+    @Query("""
+            SELECT o
+            FROM OrdenAtencionEmergencia o
+            JOIN o.historiaClinica h
+            JOIN o.medico m
+            WHERE (:inicio IS NULL OR o.createdAt >= :inicio)
+              AND (:fin IS NULL OR o.createdAt <= :fin)
+              AND (
+                    :termino IS NULL
+                    OR LOWER(h.nombreCompleto) LIKE CONCAT('%', :termino, '%')
+                    OR LOWER(m.nombreCompleto) LIKE CONCAT('%', :termino, '%')
+                  )
+            ORDER BY o.createdAt DESC
+            """)
+    Page<OrdenAtencionEmergencia> auditarOrdenes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("termino") String termino,
+            Pageable pageable);
+}

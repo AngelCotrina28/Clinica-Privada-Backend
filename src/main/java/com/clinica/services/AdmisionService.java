@@ -6,6 +6,8 @@ import com.clinica.model.entities.*;
 import com.clinica.model.repositories.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -163,7 +165,34 @@ public class AdmisionService {
                                 .map(this::toOrdenDTO)
                                 .collect(Collectors.toList());
         }
-        
+
+        @Transactional(readOnly = true)
+        public PageResponseDTO<OrdenAtencionEmergenciaResponseDTO> auditarOrdenesEmergencia(
+                        LocalDate desde,
+                        LocalDate hasta,
+                        String busqueda,
+                        int pagina,
+                        int tamano) {
+
+                if (desde != null && hasta != null && desde.isAfter(hasta)) {
+                        throw new IllegalArgumentException("La fecha Desde no puede ser mayor que la fecha Hasta.");
+                }
+
+                int paginaNormalizada = Math.max(pagina, 0);
+                int tamanoNormalizado = tamano <= 0 ? 10 : Math.min(tamano, 50);
+                LocalDateTime inicio = desde != null ? desde.atStartOfDay() : null;
+                LocalDateTime fin = hasta != null ? hasta.atTime(LocalTime.MAX) : null;
+                String termino = busqueda == null || busqueda.isBlank()
+                                ? null
+                                : busqueda.trim().toLowerCase();
+
+                Pageable pageable = PageRequest.of(paginaNormalizada, tamanoNormalizado);
+
+                return PageResponseDTO.of(
+                                ordenRepo.auditarOrdenes(inicio, fin, termino, pageable)
+                                                .map(this::toOrdenDTO));
+        }
+
         // ── HELPERS PRIVADOS ─────────────────────────────────────────────────────
 
         /** Obtiene el Trabajador autenticado desde el SecurityContext */

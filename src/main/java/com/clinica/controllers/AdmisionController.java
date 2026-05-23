@@ -4,9 +4,11 @@ import com.clinica.dtos.*;
 import com.clinica.services.AdmisionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -48,6 +50,18 @@ public class AdmisionController {
     public ResponseEntity<HistoriaClinicaResponseDTO> buscarHistoriaPorNumero(
             @RequestParam String numeroHistoria) {
         return ResponseEntity.ok(admisionService.buscarPorNumeroHistoria(numeroHistoria));
+    }
+
+    @GetMapping("/emergencia/ordenes")
+    @PreAuthorize("hasAnyRole('JEFE_ENFERMERIA','ADMINISTRADOR')")
+    public ResponseEntity<PageResponseDTO<OrdenAtencionEmergenciaResponseDTO>> auditarOrdenesEmergencia(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(
+                admisionService.auditarOrdenesEmergencia(desde, hasta, busqueda, page, size));
     }
 
     @GetMapping("/emergencia/ordenes/hoy")
