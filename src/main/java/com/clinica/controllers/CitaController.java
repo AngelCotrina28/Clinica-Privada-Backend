@@ -2,6 +2,7 @@ package com.clinica.controllers;
 
 import com.clinica.dtos.CitaRequestDTO;
 import com.clinica.dtos.CitaResponseDTO;
+import com.clinica.dtos.DisponibilidadResponseDTO;
 import com.clinica.dtos.HorarioBloqueDTO;
 import com.clinica.dtos.TrabajadorResponseDTO;
 import com.clinica.services.CitaService;
@@ -11,16 +12,19 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+
+/**
+ * Controlador REST para la gestión de citas médicas.
+ *
+ * <p>Expone los endpoints bajo {@code /api/citas} para consultar disponibilidad
+ * de médicos, listar citas existentes y registrar nuevas citas.</p>
+ *
+ * <p>La lógica de negocio reside exclusivamente en {@link CitaService}.</p>
+ */
 
 @RestController
 @RequestMapping("/api/citas")
@@ -41,10 +45,20 @@ public class CitaController {
         return ResponseEntity.ok(citaService.listarMedicosPorEspecialidad(especialidadId));
     }
 
+    @GetMapping("/disponibilidad/mensual")
+    public ResponseEntity<List<DisponibilidadResponseDTO>> consultarDisponibilidad(
+            @RequestParam Long medicoId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+        
+        return ResponseEntity.ok(citaService.consultarDisponibilidad(medicoId, fechaInicio, fechaFin));
+    }
+
     @GetMapping("/disponibilidad")
     public ResponseEntity<List<HorarioBloqueDTO>> obtenerDisponibilidad(
             @RequestParam Long medicoId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        
         return ResponseEntity.ok(citaService.obtenerDisponibilidad(medicoId, fecha));
     }
 

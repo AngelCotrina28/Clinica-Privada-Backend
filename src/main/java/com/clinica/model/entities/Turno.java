@@ -45,6 +45,12 @@ public class Turno {
     @Builder.Default
     private Integer cupoMaximo = 20;
 
+    @Min(5)
+    @Max(120)
+    @Column(name = "duracion_minutos", nullable = false)
+    @Builder.Default
+    private Integer duracionMinutos = 20;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean activo = true;

@@ -5,19 +5,8 @@ import com.clinica.dtos.CitaResponseDTO;
 import com.clinica.dtos.HorarioBloqueDTO;
 import com.clinica.dtos.TrabajadorResponseDTO;
 import com.clinica.exceptions.RecursoNoEncontradoException;
-import com.clinica.model.entities.Cita;
-import com.clinica.model.entities.Especialidad;
-import com.clinica.model.entities.HistoriaClinica;
-import com.clinica.model.entities.Paciente;
-import com.clinica.model.entities.TipoCita;
-import com.clinica.model.entities.Trabajador;
-import com.clinica.model.entities.Turno;
-import com.clinica.model.repositories.CitaRepository;
-import com.clinica.model.repositories.HistoriaClinicaRepository;
-import com.clinica.model.repositories.PacienteRepository;
-import com.clinica.model.repositories.TipoCitaRepository;
-import com.clinica.model.repositories.TrabajadorRepository;
-import com.clinica.model.repositories.TurnoRepository;
+import com.clinica.model.entities.*;
+import com.clinica.model.repositories.*;
 import com.clinica.services.CitaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -40,7 +29,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CitaServiceImpl implements CitaService {
 
-    private static final int DURACION_BLOQUE_MINUTOS = 30;
     private static final List<Cita.EstadoCita> ESTADOS_QUE_BLOQUEAN = List.of(
             Cita.EstadoCita.PROGRAMADA,
             Cita.EstadoCita.CONFIRMADA);
@@ -55,6 +43,28 @@ public class CitaServiceImpl implements CitaService {
     @Override
     @Transactional
     public CitaResponseDTO programarCita(CitaRequestDTO request) {
+        if (request.getTurnoId() == null) {
+            Turno.DiaSemana diaSemana = convertirDiaSemana(request.getFechaHora().getDayOfWeek());
+            List<Turno> turnos = turnoRepository.findTurnosActivosDelMedico(
+                    request.getMedicoId(), request.getFechaHora().toLocalDate(), request.getFechaHora().toLocalDate().minusDays(1), diaSemana);
+            
+            LocalTime horaSolicitada = request.getFechaHora().toLocalTime();
+            
+            // Buscamos el turno específico que contenga la hora solicitada
+            Turno turnoCorrecto = turnos.stream()
+                .filter(t -> !horaSolicitada.isBefore(t.getHoraInicio()) && horaSolicitada.isBefore(t.getHoraFin()))
+                .findFirst()
+                .orElse(!turnos.isEmpty() ? turnos.get(0) : null);
+
+            if (turnoCorrecto != null) {
+                request.setTurnoId(turnoCorrecto.getId());
+                // Si tampoco nos enviaron consultorio, lo tomamos de este turno exacto
+                if (request.getConsultorioId() == null) {
+                    request.setConsultorioId(turnoCorrecto.getConsultorio().getId());
+                }
+            }
+        }
+
         validarRequest(request);
 
         Trabajador creador = obtenerTrabajadorAutenticado(request.getCreadoPorId());
@@ -108,6 +118,56 @@ public class CitaServiceImpl implements CitaService {
         return mapToResponseDTO(citaRepository.save(cita));
     }
 
+    // ── MOTOR MENSUAL ──
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<com.clinica.dtos.DisponibilidadResponseDTO> consultarDisponibilidad(Long medicoId,
+            LocalDate fechaInicio, LocalDate fechaFin) {
+
+        var turnos = turnoRepository.findByMedicoIdAndActivoTrue(medicoId);
+        var citasExistentes = citaRepository.findByMedicoIdAndFechaHoraCitaBetweenAndEstadoIn(
+                medicoId, fechaInicio.atStartOfDay(), fechaFin.plusDays(1).atStartOfDay(), ESTADOS_QUE_BLOQUEAN);
+
+        java.util.List<com.clinica.dtos.DisponibilidadResponseDTO> agendaCompleta = new java.util.ArrayList<>();
+
+        for (LocalDate fecha = fechaInicio; !fecha.isAfter(fechaFin); fecha = fecha.plusDays(1)) {
+            final LocalDate fechaActual = fecha;
+            String nombreDia = fechaActual.getDayOfWeek().getDisplayName(
+                    java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("es-PE"));
+
+            var turnoDelDia = turnos.stream()
+                    .filter(t -> t.getDiaSemana() == convertirDiaSemana(fechaActual.getDayOfWeek()))
+                    .findFirst();
+
+            java.util.List<String> horasCalculadas = new java.util.ArrayList<>();
+
+            if (turnoDelDia.isPresent()) {
+                var turno = turnoDelDia.get();
+                LocalTime tiempoActual = turno.getHoraInicio();
+
+                while (tiempoActual.plusMinutes(turno.getDuracionMinutos()).isBefore(turno.getHoraFin())
+                        || tiempoActual.plusMinutes(turno.getDuracionMinutos()).equals(turno.getHoraFin())) {
+
+                    LocalDateTime bloqueEvaluado = LocalDateTime.of(fechaActual, tiempoActual);
+                    boolean estaOcupado = citasExistentes.stream()
+                            .anyMatch(c -> c.getFechaHoraCita().equals(bloqueEvaluado));
+
+                    if (!estaOcupado) {
+                        horasCalculadas.add(tiempoActual.format(DateTimeFormatter.ofPattern("HH:mm")));
+                    }
+                    tiempoActual = tiempoActual.plusMinutes(turno.getDuracionMinutos());
+                }
+            }
+
+            agendaCompleta.add(com.clinica.dtos.DisponibilidadResponseDTO.builder()
+                    .fecha(fechaActual)
+                    .diaNombre(nombreDia.substring(0, 1).toUpperCase() + nombreDia.substring(1))
+                    .horariosDisponibles(horasCalculadas)
+                    .build());
+        }
+        return agendaCompleta;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<CitaResponseDTO> listarCitas() {
@@ -119,10 +179,7 @@ public class CitaServiceImpl implements CitaService {
     @Override
     @Transactional(readOnly = true)
     public List<TrabajadorResponseDTO> listarMedicosPorEspecialidad(Long especialidadId) {
-        if (especialidadId == null) {
-            throw new IllegalArgumentException("Debe seleccionar una especialidad.");
-        }
-
+        if (especialidadId == null) throw new IllegalArgumentException("Debe seleccionar especialidad.");
         return turnoRepository.findMedicosActivosByEspecialidad(especialidadId).stream()
                 .map(this::mapTrabajadorToDTO)
                 .collect(Collectors.toList());
@@ -131,9 +188,7 @@ public class CitaServiceImpl implements CitaService {
     @Override
     @Transactional(readOnly = true)
     public List<HorarioBloqueDTO> obtenerDisponibilidad(Long medicoId, LocalDate fecha) {
-        if (medicoId == null || fecha == null) {
-            throw new IllegalArgumentException("Debe seleccionar medico y fecha.");
-        }
+        if (medicoId == null || fecha == null) throw new IllegalArgumentException("Seleccione medico y fecha.");
 
         Turno.DiaSemana diaSemana = convertirDiaSemana(fecha.getDayOfWeek());
         List<Turno> turnos = turnoRepository.findTurnosActivosDelMedico(medicoId, fecha, fecha.minusDays(1), diaSemana);
@@ -141,21 +196,15 @@ public class CitaServiceImpl implements CitaService {
         LocalDateTime finDia = fecha.plusDays(1).atStartOfDay();
 
         Map<LocalDateTime, Cita> citasOcupadas = citaRepository
-                .findByMedicoIdAndFechaHoraCitaBetweenAndEstadoIn(
-                        medicoId, inicioDia, finDia, ESTADOS_QUE_BLOQUEAN)
-                .stream()
-                .collect(Collectors.toMap(Cita::getFechaHoraCita, Function.identity(), (a, b) -> a));
+                .findByMedicoIdAndFechaHoraCitaBetweenAndEstadoIn(medicoId, inicioDia, finDia, ESTADOS_QUE_BLOQUEAN)
+                .stream().collect(Collectors.toMap(Cita::getFechaHoraCita, Function.identity(), (a, b) -> a));
 
         return turnos.stream()
                 .flatMap(turno -> generarBloques(fecha, turno, citasOcupadas).stream())
                 .collect(Collectors.toList());
     }
 
-    private List<HorarioBloqueDTO> generarBloques(
-            LocalDate fecha,
-            Turno turno,
-            Map<LocalDateTime, Cita> citasOcupadas) {
-
+    private List<HorarioBloqueDTO> generarBloques(LocalDate fecha, Turno turno, Map<LocalDateTime, Cita> citasOcupadas) {
         java.util.ArrayList<HorarioBloqueDTO> bloques = new java.util.ArrayList<>();
         LocalDateTime inicioTurno = inicioTurno(turno, fecha);
         LocalDateTime finTurno = finTurno(turno, fecha);
@@ -163,7 +212,7 @@ public class CitaServiceImpl implements CitaService {
         LocalDateTime finDia = fecha.plusDays(1).atStartOfDay();
         LocalDateTime cursor = inicioTurno.isBefore(inicioDia) ? inicioDia : inicioTurno;
 
-        while (!cursor.plusMinutes(DURACION_BLOQUE_MINUTOS).isAfter(finTurno) && cursor.isBefore(finDia)) {
+        while (!cursor.plusMinutes(turno.getDuracionMinutos()).isAfter(finTurno) && cursor.isBefore(finDia)) {
             LocalDateTime fechaHora = cursor;
             Cita citaOcupada = citasOcupadas.get(fechaHora);
             boolean disponible = citaOcupada == null && !fechaHora.isBefore(LocalDateTime.now());
@@ -173,16 +222,14 @@ public class CitaServiceImpl implements CitaService {
                     .consultorioId(turno.getConsultorio().getId())
                     .consultorio(turno.getConsultorio().getNombre())
                     .horaInicio(fechaHora.toLocalTime())
-                    .horaFin(fechaHora.plusMinutes(DURACION_BLOQUE_MINUTOS).toLocalTime())
+                    .horaFin(fechaHora.plusMinutes(turno.getDuracionMinutos()).toLocalTime())
                     .disponible(disponible)
                     .estado(disponible ? "DISPONIBLE" : "OCUPADO")
                     .citaId(citaOcupada != null ? citaOcupada.getId() : null)
                     .numeroCita(citaOcupada != null ? citaOcupada.getNumeroCita() : null)
                     .build());
-
-            cursor = cursor.plusMinutes(DURACION_BLOQUE_MINUTOS);
+            cursor = cursor.plusMinutes(turno.getDuracionMinutos());
         }
-
         return bloques;
     }
 
@@ -196,9 +243,7 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private Paciente vincularPacienteConHistoria(Paciente paciente, HistoriaClinica historia) {
-        if (!paciente.isActivo()) {
-            throw new IllegalStateException("El paciente asociado a la historia clinica esta inactivo.");
-        }
+        if (!paciente.isActivo()) throw new IllegalStateException("Paciente inactivo.");
         paciente.setHistoriaClinicaId(historia.getId());
         sincronizarDatosBasicosPaciente(paciente, historia);
         return pacienteRepository.save(paciente);
@@ -215,8 +260,7 @@ public class CitaServiceImpl implements CitaService {
                 .direccion(valorOpcional(historia.getDireccion()))
                 .historiaClinicaId(historia.getId())
                 .registradoPor(registrador)
-                .activo(true)
-                .build();
+                .activo(true).build();
         return pacienteRepository.save(paciente);
     }
 
@@ -230,14 +274,8 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private LocalDate parseFechaNacimiento(String fechaNacimiento) {
-        if (fechaNacimiento == null || fechaNacimiento.isBlank()) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(fechaNacimiento.trim());
-        } catch (DateTimeParseException ex) {
-            return null;
-        }
+        if (fechaNacimiento == null || fechaNacimiento.isBlank()) return null;
+        try { return LocalDate.parse(fechaNacimiento.trim()); } catch (DateTimeParseException ex) { return null; }
     }
 
     private String valorOpcional(String value) {
@@ -245,58 +283,41 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private void validarRequest(CitaRequestDTO request) {
-        if (request.getHistoriaClinicaId() == null) {
-            throw new IllegalArgumentException("Debe seleccionar una historia clinica.");
+        if (request.getHistoriaClinicaId() == null && request.getPacienteId() == null) {
+            throw new IllegalArgumentException("Debe seleccionar una historia clinica o paciente.");
         }
-        if (request.getMedicoId() == null) {
-            throw new IllegalArgumentException("Debe seleccionar un medico.");
-        }
-        if (request.getTurnoId() == null) {
-            throw new IllegalArgumentException("Debe seleccionar un bloque horario.");
-        }
-        if (request.getFechaHora() == null) {
-            throw new IllegalArgumentException("Debe seleccionar fecha y hora.");
-        }
+        if (request.getMedicoId() == null) throw new IllegalArgumentException("Debe seleccionar un medico.");
+        if (request.getTurnoId() == null) throw new IllegalArgumentException("Debe seleccionar un bloque horario.");
+        if (request.getFechaHora() == null) throw new IllegalArgumentException("Debe seleccionar fecha y hora.");
     }
 
     private void validarTurno(CitaRequestDTO request, Trabajador medico, Turno turno) {
-        if (!esMedico(turno.getMedico())) {
-            throw new IllegalArgumentException("El turno seleccionado no pertenece a un medico.");
-        }
-        if (!turno.isActivo()) {
-            throw new IllegalStateException("El turno seleccionado no esta activo.");
-        }
-        if (!turno.getMedico().getId().equals(medico.getId())) {
-            throw new IllegalArgumentException("El turno seleccionado no pertenece al medico.");
-        }
+        if (!esMedico(turno.getMedico())) throw new IllegalArgumentException("Turno no es de medico.");
+        if (!turno.isActivo()) throw new IllegalStateException("Turno inactivo.");
+        if (!turno.getMedico().getId().equals(medico.getId())) throw new IllegalArgumentException("Turno no pertenece al medico.");
+        
         if (request.getEspecialidadId() != null) {
-            boolean pertenece = medico.getEspecialidades().stream()
-                    .anyMatch(e -> e.getId().equals(request.getEspecialidadId()));
-            if (!pertenece) {
-                throw new IllegalArgumentException("El medico no pertenece a la especialidad seleccionada.");
-            }
+            boolean pertenece = medico.getEspecialidades().stream().anyMatch(e -> e.getId().equals(request.getEspecialidadId()));
+            if (!pertenece) throw new IllegalArgumentException("Medico no pertenece a especialidad.");
         }
 
         LocalDate fecha = request.getFechaHora().toLocalDate();
-        LocalTime hora = request.getFechaHora().toLocalTime();
         LocalDateTime inicioTurno = inicioTurno(turno, fecha);
         LocalDateTime finTurno = finTurno(turno, fecha);
-        LocalDateTime fechaHoraSolicitada = request.getFechaHora();
 
-        if (turno.getFecha() != null
-                && !turno.getFecha().equals(fecha)
-                && !(esNocturno(turno) && turno.getFecha().plusDays(1).equals(fecha))) {
-            throw new IllegalArgumentException("El turno no corresponde a la fecha seleccionada.");
+        if (turno.getFecha() != null && !turno.getFecha().equals(fecha) && !(esNocturno(turno) && turno.getFecha().plusDays(1).equals(fecha))) {
+            throw new IllegalArgumentException("Turno no corresponde a la fecha.");
         }
         if (!esNocturno(turno) && turno.getDiaSemana() != convertirDiaSemana(fecha.getDayOfWeek())) {
-            throw new IllegalArgumentException("El turno no corresponde al dia seleccionado.");
+            throw new IllegalArgumentException("Turno no corresponde al dia.");
         }
-        if (fechaHoraSolicitada.isBefore(inicioTurno)
-                || fechaHoraSolicitada.plusMinutes(DURACION_BLOQUE_MINUTOS).isAfter(finTurno)) {
-            throw new IllegalArgumentException("La hora seleccionada esta fuera del turno del medico.");
+        if (request.getFechaHora().isBefore(inicioTurno) || request.getFechaHora().plusMinutes(turno.getDuracionMinutos()).isAfter(finTurno)) {
+            throw new IllegalArgumentException("Hora fuera de turno.");
         }
-        if (hora.getMinute() % DURACION_BLOQUE_MINUTOS != 0) {
-            throw new IllegalArgumentException("La hora seleccionada debe coincidir con un bloque de 30 minutos.");
+
+        long minutosTranscurridos = java.time.Duration.between(inicioTurno, request.getFechaHora()).toMinutes();
+        if (minutosTranscurridos % turno.getDuracionMinutos() != 0) {
+            throw new IllegalArgumentException("La hora debe coincidir con los bloques de " + turno.getDuracionMinutos() + " minutos configurados para este turno.");
         }
     }
 
@@ -304,22 +325,16 @@ public class CitaServiceImpl implements CitaService {
         return tipoCitaRepository.findFirstByNombreIgnoreCaseAndActivoTrue("CONSULTA EXTERNA")
                 .or(() -> tipoCitaRepository.findFirstByActivoTrueOrderByIdAsc())
                 .orElseGet(() -> tipoCitaRepository.save(TipoCita.builder()
-                        .nombre("CONSULTA EXTERNA")
-                        .descripcion("Cita de consulta externa")
-                        .duracionMinutos(DURACION_BLOQUE_MINUTOS)
-                        .activo(true)
-                        .build()));
+                        .nombre("CONSULTA EXTERNA").descripcion("Cita externa").duracionMinutos(20).activo(true).build()));
     }
 
     private LocalDateTime inicioTurno(Turno turno, LocalDate fechaConsulta) {
-        LocalDate fechaInicio = turno.getFecha() != null ? turno.getFecha() : fechaConsulta;
-        return LocalDateTime.of(fechaInicio, turno.getHoraInicio());
+        return LocalDateTime.of(turno.getFecha() != null ? turno.getFecha() : fechaConsulta, turno.getHoraInicio());
     }
 
     private LocalDateTime finTurno(Turno turno, LocalDate fechaConsulta) {
         LocalDateTime inicio = inicioTurno(turno, fechaConsulta);
-        LocalDate fechaFin = esNocturno(turno) ? inicio.toLocalDate().plusDays(1) : inicio.toLocalDate();
-        return LocalDateTime.of(fechaFin, turno.getHoraFin());
+        return LocalDateTime.of(esNocturno(turno) ? inicio.toLocalDate().plusDays(1) : inicio.toLocalDate(), turno.getHoraFin());
     }
 
     private boolean esNocturno(Turno turno) {
@@ -327,32 +342,24 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private boolean esMedico(Trabajador trabajador) {
-        return trabajador.getRol() != null
-                && trabajador.getRol().getNombre() != null
-                && "MEDICO".equalsIgnoreCase(trabajador.getRol().getNombre());
+        return trabajador.getRol() != null && "MEDICO".equalsIgnoreCase(trabajador.getRol().getNombre());
     }
 
     private Trabajador obtenerTrabajadorAutenticado(Long creadoPorIdFallback) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && authentication.getName() != null
-                && !"anonymousUser".equals(authentication.getName())) {
-            return trabajadorRepository.findByUsername(authentication.getName())
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getName() != null && !"anonymousUser".equals(auth.getName())) {
+            return trabajadorRepository.findByUsername(auth.getName())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Usuario autenticado no encontrado."));
         }
-
         if (creadoPorIdFallback != null) {
             return trabajadorRepository.findById(creadoPorIdFallback)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Usuario creador no encontrado."));
         }
-
-        throw new IllegalArgumentException("No se pudo identificar al usuario que programa la cita.");
+        throw new IllegalArgumentException("No se pudo identificar al usuario.");
     }
 
     private String generarNumeroCita(LocalDateTime fechaHora) {
-        String fechaStr = fechaHora.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        return "CT-" + fechaStr + "-" + String.format("%06d", Math.abs(System.nanoTime() % 1_000_000));
+        return "CT-" + fechaHora.format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + String.format("%06d", Math.abs(System.nanoTime() % 1_000_000));
     }
 
     private Turno.DiaSemana convertirDiaSemana(DayOfWeek dayOfWeek) {
@@ -369,9 +376,7 @@ public class CitaServiceImpl implements CitaService {
 
     private TrabajadorResponseDTO mapTrabajadorToDTO(Trabajador trabajador) {
         List<String> especialidades = trabajador.getEspecialidades() != null
-                ? trabajador.getEspecialidades().stream()
-                        .map(Especialidad::getNombre)
-                        .collect(Collectors.toList())
+                ? trabajador.getEspecialidades().stream().map(Especialidad::getNombre).collect(Collectors.toList())
                 : List.of();
 
         return TrabajadorResponseDTO.builder()

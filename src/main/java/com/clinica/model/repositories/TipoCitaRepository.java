@@ -8,6 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface TipoCitaRepository extends JpaRepository<TipoCita, Long> {
+    
     Optional<TipoCita> findFirstByNombreIgnoreCaseAndActivoTrue(String nombre);
 
     Optional<TipoCita> findFirstByActivoTrueOrderByIdAsc();

@@ -9,6 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface ConsultorioRepository extends JpaRepository<Consultorio, Long> {
+    
     Optional<Consultorio> findFirstByEspecialidadIdAndActivoTrueOrderByIdAsc(Long especialidadId);
     Optional<Consultorio> findFirstByActivoTrueOrderByIdAsc();
     List<Consultorio> findByEspecialidadIdAndActivoTrueOrderByIdAsc(Long especialidadId);
