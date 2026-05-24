@@ -37,4 +37,15 @@ public class AtencionMedicaController {
         Long idGenerado = atencionService.registrarAtencion(request);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(idGenerado);
     }
+
+
+    /**
+     * Endpoint para validar si el código ingresado existe como Cita u Orden de Emergencia.
+     */
+    @GetMapping("/verificar-cita/{codigo}")
+    @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')") // Agregado por seguridad
+    public ResponseEntity<Boolean> verificarCitaUOrden(@PathVariable String codigo) {
+        boolean existe = atencionService.verificarExistenciaCitaUOrden(codigo);
+        return ResponseEntity.ok(existe);
+    }
 }

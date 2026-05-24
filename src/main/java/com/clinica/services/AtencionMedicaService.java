@@ -5,11 +5,13 @@ import com.clinica.model.entities.AtencionMedica;
 import com.clinica.model.repositories.AtencionMedicaRepository;
 import com.clinica.model.repositories.HistoriaClinicaRepository;
 import com.clinica.model.repositories.TrabajadorRepository;
-
+import com.clinica.model.repositories.CitaRepository;
+import com.clinica.model.repositories.OrdenAtencionEmergenciaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,11 +22,9 @@ public class AtencionMedicaService {
     private final AtencionMedicaRepository atencionRepo;
     private final HistoriaClinicaRepository historiaRepo;
     private final TrabajadorRepository trabajadorRepo;
+    private final CitaRepository citaRepo;
+    private final OrdenAtencionEmergenciaRepository ordenAtencionEmergenciaRepo;
 
-    /**
-     * Recupera el historial clínico detallado.
-     * Mapea cada entidad AtencionMedica a su DTO de historial.
-     */
     @Transactional(readOnly = true)
     public List<AtencionMedicaHistorialDTO> obtenerHistorialPorPaciente(Long historiaId) {
         return atencionRepo.findByHistoriaClinicaIdOrderByFechaHoraInicioDesc(historiaId)
@@ -48,7 +48,7 @@ public class AtencionMedicaService {
     }
 
     /**
-     * Registra una nueva atención médica en la base de datos.
+     * Registra una nueva atención médica vinculando su Cita u Orden correspondiente.
      */
     @Transactional
     public Long registrarAtencion(com.clinica.dtos.AtencionMedicaRequestDTO request) {
@@ -58,15 +58,75 @@ public class AtencionMedicaService {
         com.clinica.model.entities.Trabajador medico = trabajadorRepo.findById(request.getMedicoId())
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado con ID: " + request.getMedicoId()));
 
-        AtencionMedica nuevaAtencion = AtencionMedica.builder()
+        AtencionMedica.AtencionMedicaBuilder atencionBuilder = AtencionMedica.builder()
                 .historiaClinica(historia)
                 .medico(medico)
                 .diagnosticoPrincipal(request.getDiagnosticoPrincipal())
-                .observaciones(request.getNotasEvolucion())
-                .build();
+                .observaciones(request.getNotasEvolucion());
 
+        String codigo = request.getNumeroCita(); 
+        LocalDate hoy = LocalDate.now(); 
+        
+        if (codigo != null && !codigo.trim().isEmpty()) {
+            String codigoLimpio = codigo.trim();
+            
+            if (codigoLimpio.startsWith("CT")) {
+                citaRepo.findByNumeroCita(codigoLimpio)
+                        .filter(cita -> cita.getFechaHoraCita().toLocalDate().equals(hoy))
+                        // Verifica que no esté ya finalizada/atendida
+                        .filter(cita -> !cita.getEstado().name().equals("ATENDIDA")) 
+                        .ifPresent(cita -> {
+                            // Cambia a ATENDIDA solo al momento de guardar
+                            cita.setEstado(com.clinica.model.entities.Cita.EstadoCita.ATENDIDA);
+                            atencionBuilder.cita(cita);
+                        });
+                        
+            } else if (codigoLimpio.startsWith("OE")) {
+                ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
+                        .filter(orden -> orden.getCreatedAt().toLocalDate().equals(hoy))
+                        // Usamos FINALIZADO según tu SQL
+                        .filter(orden -> !orden.getEstado().name().equals("FINALIZADO"))
+                        .ifPresent(orden -> {
+                            // Cambia a FINALIZADO solo al momento de guardar
+                            orden.setEstado(com.clinica.model.entities.OrdenAtencionEmergencia.EstadoOrden.FINALIZADO);
+                            atencionBuilder.ordenEmergencia(orden);
+                        });
+            }
+        }
+
+        AtencionMedica nuevaAtencion = atencionBuilder.build();
         AtencionMedica atencionGuardada = atencionRepo.save(nuevaAtencion);
 
         return atencionGuardada.getId();
+    }
+
+    /**
+     * Valida en tiempo real para el frontend si el código existe, 
+     * es del día de hoy, y está pendiente de atención.
+     */
+    @Transactional(readOnly = true)
+    public boolean verificarExistenciaCitaUOrden(String codigoAtencion) {
+        if (codigoAtencion == null || codigoAtencion.trim().isEmpty()) {
+            return false;
+        }
+
+        String codigoLimpio = codigoAtencion.trim();
+        LocalDate hoy = LocalDate.now();
+
+        if (codigoLimpio.startsWith("CT")) {
+            return citaRepo.findByNumeroCita(codigoLimpio)
+                    .map(cita -> cita.getFechaHoraCita().toLocalDate().equals(hoy) &&
+                                 !cita.getEstado().name().equals("ATENDIDA"))
+                    .orElse(false);
+                    
+        } else if (codigoLimpio.startsWith("OE")) {
+            return ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
+                    // Filtramos usando FINALIZADO según tu SQL
+                    .map(orden -> orden.getCreatedAt().toLocalDate().equals(hoy) &&
+                                  !orden.getEstado().name().equals("FINALIZADO"))
+                    .orElse(false);
+        }
+        
+        return false;
     }
 }
