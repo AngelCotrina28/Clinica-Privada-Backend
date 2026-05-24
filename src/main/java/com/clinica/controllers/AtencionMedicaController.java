@@ -8,7 +8,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+import java.util.Map;
+import java.util.Collections;
 @RestController
 @RequestMapping("/api/atenciones")
 @RequiredArgsConstructor
@@ -43,9 +44,12 @@ public class AtencionMedicaController {
      * Endpoint para validar si el código ingresado existe como Cita u Orden de Emergencia.
      */
     @GetMapping("/verificar-cita/{codigo}")
-    @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')") // Agregado por seguridad
-    public ResponseEntity<Boolean> verificarCitaUOrden(@PathVariable String codigo) {
-        boolean existe = atencionService.verificarExistenciaCitaUOrden(codigo);
-        return ResponseEntity.ok(existe);
+    @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')")
+    public ResponseEntity<Map<String, String>> verificarCitaUOrden(@PathVariable String codigo) {
+        // Llama al nuevo método que devuelve un String
+        String estado = atencionService.verificarEstadoCitaUOrden(codigo);
+        
+        // Lo empaqueta en un JSON: {"estado": "VALIDA"}
+        return ResponseEntity.ok(Collections.singletonMap("estado", estado));
     }
 }

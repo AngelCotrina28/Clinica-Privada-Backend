@@ -101,13 +101,13 @@ public class AtencionMedicaService {
     }
 
     /**
-     * Valida en tiempo real para el frontend si el código existe, 
+     * Valida en tiempo real para el frontend si el código existe,
      * es del día de hoy, y está pendiente de atención.
      */
     @Transactional(readOnly = true)
-    public boolean verificarExistenciaCitaUOrden(String codigoAtencion) {
+    public String verificarEstadoCitaUOrden(String codigoAtencion) {
         if (codigoAtencion == null || codigoAtencion.trim().isEmpty()) {
-            return false;
+            return "NO_EXISTE";
         }
 
         String codigoLimpio = codigoAtencion.trim();
@@ -115,18 +115,23 @@ public class AtencionMedicaService {
 
         if (codigoLimpio.startsWith("CT")) {
             return citaRepo.findByNumeroCita(codigoLimpio)
-                    .map(cita -> cita.getFechaHoraCita().toLocalDate().equals(hoy) &&
-                                 !cita.getEstado().name().equals("ATENDIDA"))
-                    .orElse(false);
+                    .map(cita -> {
+                        if (!cita.getFechaHoraCita().toLocalDate().equals(hoy)) return "OTRA_FECHA";
+                        if (cita.getEstado().name().equals("ATENDIDA")) return "ATENDIDA";
+                        return "VALIDA";
+                    })
+                    .orElse("NO_EXISTE");
                     
         } else if (codigoLimpio.startsWith("OE")) {
             return ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
-                    // Filtramos usando FINALIZADO según tu SQL
-                    .map(orden -> orden.getCreatedAt().toLocalDate().equals(hoy) &&
-                                  !orden.getEstado().name().equals("FINALIZADO"))
-                    .orElse(false);
+                    .map(orden -> {
+                        if (!orden.getCreatedAt().toLocalDate().equals(hoy)) return "OTRA_FECHA";
+                        if (orden.getEstado().name().equals("FINALIZADO")) return "ATENDIDA";
+                        return "VALIDA";
+                    })
+                    .orElse("NO_EXISTE");
         }
         
-        return false;
+        return "NO_EXISTE";
     }
 }
