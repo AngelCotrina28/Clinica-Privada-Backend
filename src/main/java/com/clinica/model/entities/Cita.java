@@ -27,9 +27,6 @@ public class Cita {
     @JoinColumn(name = "paciente_id", nullable = false)
     private Paciente paciente;
 
-    @Column(name = "historia_clinica_id", nullable = false)
-    private Long historiaClinicaId;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "medico_id", nullable = false)
     private Trabajador medico;

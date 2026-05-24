@@ -27,4 +27,14 @@ public class AtencionMedicaController {
         List<AtencionMedicaHistorialDTO> historial = atencionService.obtenerHistorialPorPaciente(historiaId);
         return ResponseEntity.ok(historial);
     }
+
+    /**
+     * Recibe los datos desde Angular y registra los resultados de la atención médica.
+     */
+    @PostMapping("/registro")
+    @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')")
+    public ResponseEntity<Long> registrarAtencion(@RequestBody com.clinica.dtos.AtencionMedicaRequestDTO request) {
+        Long idGenerado = atencionService.registrarAtencion(request);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(idGenerado);
+    }
 }
