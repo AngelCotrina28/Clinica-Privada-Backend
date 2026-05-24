@@ -3,6 +3,9 @@ package com.clinica.services;
 import com.clinica.dtos.AtencionMedicaHistorialDTO;
 import com.clinica.model.entities.AtencionMedica;
 import com.clinica.model.repositories.AtencionMedicaRepository;
+import com.clinica.model.repositories.HistoriaClinicaRepository;
+import com.clinica.model.repositories.TrabajadorRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,8 @@ import java.util.stream.Collectors;
 public class AtencionMedicaService {
 
     private final AtencionMedicaRepository atencionRepo;
+    private final HistoriaClinicaRepository historiaRepo;
+    private final TrabajadorRepository trabajadorRepo;
 
     /**
      * Recupera el historial clínico detallado.
@@ -40,5 +45,28 @@ public class AtencionMedicaService {
                 .diagnosticoSecundario(a.getDiagnosticoSecundario())
                 .tratamiento(a.getTratamiento())
                 .build();
+    }
+
+    /**
+     * Registra una nueva atención médica en la base de datos.
+     */
+    @Transactional
+    public Long registrarAtencion(com.clinica.dtos.AtencionMedicaRequestDTO request) {
+        com.clinica.model.entities.HistoriaClinica historia = historiaRepo.findById(request.getHistoriaClinicaId())
+                .orElseThrow(() -> new RuntimeException("Historia clínica no encontrada con ID: " + request.getHistoriaClinicaId()));
+
+        com.clinica.model.entities.Trabajador medico = trabajadorRepo.findById(request.getMedicoId())
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado con ID: " + request.getMedicoId()));
+
+        AtencionMedica nuevaAtencion = AtencionMedica.builder()
+                .historiaClinica(historia)
+                .medico(medico)
+                .diagnosticoPrincipal(request.getDiagnosticoPrincipal())
+                .observaciones(request.getNotasEvolucion())
+                .build();
+
+        AtencionMedica atencionGuardada = atencionRepo.save(nuevaAtencion);
+
+        return atencionGuardada.getId();
     }
 }
