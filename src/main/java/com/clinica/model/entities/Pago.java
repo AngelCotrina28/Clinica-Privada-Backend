@@ -41,7 +41,6 @@ public class Pago {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal monto;
 
-    /** Nro. de operación, voucher, transferencia, etc. */
     @Column(length = 100)
     private String referencia;
 

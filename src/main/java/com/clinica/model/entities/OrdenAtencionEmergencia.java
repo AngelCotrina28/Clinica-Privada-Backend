@@ -6,10 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Orden de Atención de Emergencia.
- * Vincula una Historia Clínica con un Médico disponible.
- */
 @Entity
 @Table(name = "ordenes_atencion_emergencia")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -19,7 +15,6 @@ public class OrdenAtencionEmergencia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Número de orden generado (ej. OE-20240001) */
     @Column(name = "numero_orden", nullable = false, unique = true, length = 20)
     private String numeroOrden;
 
@@ -27,7 +22,6 @@ public class OrdenAtencionEmergencia {
     @JoinColumn(name = "historia_clinica_id", nullable = false)
     private HistoriaClinica historiaClinica;
 
-    /** Médico asignado para la atención */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "medico_id", nullable = false)
     private Trabajador medico;
@@ -40,7 +34,6 @@ public class OrdenAtencionEmergencia {
     @Column(columnDefinition = "TEXT")
     private String motivo;
 
-    /** Trabajador que generó la orden */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "generado_por", nullable = false)
     private Trabajador generadoPor;

@@ -26,7 +26,6 @@ public class MedicamentoResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    /** Indica si el stock está por debajo del mínimo */
     public boolean isStockBajo() {
         return stockActual != null && stockMinimo != null && stockActual <= stockMinimo;
     }

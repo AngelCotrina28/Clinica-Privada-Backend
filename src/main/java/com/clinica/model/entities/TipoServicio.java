@@ -18,7 +18,6 @@ public class TipoServicio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Ej: Consulta, Procedimiento, Examen, Medicamento */
     @NotBlank
     @Size(max = 100)
     @Column(nullable = false, length = 100)

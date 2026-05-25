@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
-/**
- * Registro del acto clínico: anamnesis, examen físico,
- * diagnóstico y tratamiento indicado por el médico.
- */
 @Entity
 @Table(name = "atenciones_medicas")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -21,12 +17,10 @@ public class AtencionMedica {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Origen: consulta externa */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cita_id")
     private Cita cita;
 
-    /** Origen: emergencia */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "orden_emergencia_id")
     private OrdenAtencionEmergencia ordenEmergencia;
@@ -39,7 +33,6 @@ public class AtencionMedica {
     @JoinColumn(name = "historia_clinica_id", nullable = false)
     private HistoriaClinica historiaClinica;
 
-    /** Triaje registrado previo a esta atención */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "triaje_id")
     private Triaje triaje;
@@ -47,7 +40,6 @@ public class AtencionMedica {
     @Column(name = "motivo_consulta", columnDefinition = "TEXT")
     private String motivoConsulta;
 
-    /** Historia de la enfermedad actual */
     @Column(columnDefinition = "TEXT")
     private String anamnesis;
 
@@ -57,7 +49,6 @@ public class AtencionMedica {
     @Column(name = "diagnostico_principal", length = 500)
     private String diagnosticoPrincipal;
 
-    /** Código CIE-10 del diagnóstico principal */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cie10_id")
     private DiagnosticoCIE cie10;

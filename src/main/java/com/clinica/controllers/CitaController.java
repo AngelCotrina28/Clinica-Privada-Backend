@@ -17,15 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Controlador REST para la gestión de citas médicas.
- *
- * <p>Expone los endpoints bajo {@code /api/citas} para consultar disponibilidad
- * de médicos, listar citas existentes y registrar nuevas citas.</p>
- *
- * <p>La lógica de negocio reside exclusivamente en {@link CitaService}.</p>
- */
-
 @RestController
 @RequestMapping("/api/citas")
 @RequiredArgsConstructor

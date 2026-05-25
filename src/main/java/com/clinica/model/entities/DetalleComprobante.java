@@ -5,10 +5,6 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-/**
- * Líneas del comprobante. Son inmutables una vez emitido;
- * se copian desde DetalleOrdenServicio al momento de la emisión.
- */
 @Entity
 @Table(name = "detalle_comprobante")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder

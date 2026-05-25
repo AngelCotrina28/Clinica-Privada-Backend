@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
-            String username = jwtService.extractUsername(jwt); // línea 45
+            String username = jwtService.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -62,7 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-            // Token vencido → 401, no 500
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.setHeader("Access-Control-Allow-Origin", "*");
@@ -70,7 +69,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
             
         } catch (JwtException e) {
-            // Token malformado u otro problema
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.setHeader("Access-Control-Allow-Origin", "*");

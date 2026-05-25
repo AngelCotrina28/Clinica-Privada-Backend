@@ -5,7 +5,6 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-
 @Entity
 @Table(name = "detalle_despacho")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -27,7 +26,6 @@ public class DetalleDespacho {
     @JoinColumn(name = "medicamento_id", nullable = false)
     private Medicamento medicamento;
 
-    /** Lote del que se extrae el medicamento (trazabilidad) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lote_id")
     private LoteMedicamento lote;

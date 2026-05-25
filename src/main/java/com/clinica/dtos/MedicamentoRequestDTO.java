@@ -5,14 +5,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
-/**
- * DTO de entrada para CREAR o EDITAR un medicamento.
- * Las validaciones aquí reflejan las reglas de negocio:
- *   - precio > 0
- *   - código no vacío
- *   - nombre no vacío
- *   - stock >= 0
- */
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class MedicamentoRequestDTO {
  

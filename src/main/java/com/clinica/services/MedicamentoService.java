@@ -9,7 +9,6 @@ import com.clinica.model.entities.HistorialMedicamento;
 import com.clinica.model.entities.Medicamento;
 import com.clinica.model.entities.Trabajador;
 
-
 import com.clinica.mappers.MedicamentoMapper;
 import com.clinica.model.repositories.CategoriaMedicamentoRepository;
 import com.clinica.model.repositories.HistorialMedicamentoRepository;
@@ -19,8 +18,6 @@ import com.clinica.model.repositories.TrabajadorRepository;
 import com.clinica.exceptions.CodigoDuplicadoException;
 import com.clinica.exceptions.MedicamentoInactivoException;
 import com.clinica.exceptions.RecursoNoEncontradoException;
-
-
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,8 +38,6 @@ public class MedicamentoService {
     private final HistorialMedicamentoRepository historialRepo;
     private final TrabajadorRepository           TrabajadorRepo;
     private final MedicamentoMapper           mapper;
-
-    // ─── LISTAR / BUSCAR ─────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public PageResponseDTO<MedicamentoResponseDTO> buscar(
@@ -70,11 +65,8 @@ public class MedicamentoService {
         return PageResponseDTO.of(medicamentoRepo.findStockBajo(pageable).map(mapper::toResponse));
     }
 
-    // ─── REGISTRAR ───────────────────────────────────────────────────────────
-
     @Transactional
     public MedicamentoResponseDTO registrar(MedicamentoRequestDTO dto) {
-        // Regla: código único
         if (medicamentoRepo.existsByCodigo(dto.getCodigo())) {
             throw new CodigoDuplicadoException("Ya existe un medicamento con el código: " + dto.getCodigo());
         }
@@ -90,8 +82,8 @@ public class MedicamentoService {
                 .categoria(categoria)
                 .presentacion(dto.getPresentacion())
                 .laboratorio(dto.getLaboratorio())
-                .precioUnitario(dto.getPrecioUnitario())   // @DecimalMin(0.01) ya validado en DTO
-                .stockActual(dto.getStockInicial())         // @Min(0) ya validado en DTO
+                .precioUnitario(dto.getPrecioUnitario())
+                .stockActual(dto.getStockInicial())
                 .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0)
                 .requiereReceta(dto.isRequiereReceta())
                 .activo(true)
@@ -107,8 +99,6 @@ public class MedicamentoService {
         return mapper.toResponse(medicamento);
     }
 
-    // ─── EDITAR ──────────────────────────────────────────────────────────────
-
     @Transactional
     public MedicamentoResponseDTO editar(Long id, MedicamentoRequestDTO dto) {
         Medicamento medicamento = obtenerEntidad(id);
@@ -117,7 +107,6 @@ public class MedicamentoService {
             throw new MedicamentoInactivoException("No se puede editar un medicamento inactivo.");
         }
 
-        // Regla: código único (excluye el propio registro)
         if (medicamentoRepo.existsByCodigoAndIdNot(dto.getCodigo(), id)) {
             throw new CodigoDuplicadoException(
                     "Ya existe otro medicamento con el código: " + dto.getCodigo());
@@ -125,7 +114,6 @@ public class MedicamentoService {
 
         Trabajador TrabajadorActual = getTrabajadorAutenticado();
 
-        // Auditoría campo a campo
         auditarCambio(medicamento, "precio_unitario",
                 medicamento.getPrecioUnitario().toPlainString(),
                 dto.getPrecioUnitario().toPlainString());
@@ -133,7 +121,6 @@ public class MedicamentoService {
                 String.valueOf(medicamento.getStockActual()),
                 String.valueOf(dto.getStockInicial()));
 
-        // Aplicar cambios
         medicamento.setCodigo(dto.getCodigo());
         medicamento.setNombre(dto.getNombre());
         medicamento.setNombreGenerico(dto.getNombreGenerico());
@@ -151,8 +138,6 @@ public class MedicamentoService {
         log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), TrabajadorActual.getUsername());
         return mapper.toResponse(medicamento);
     }
-
-    // ─── INACTIVAR ────────────────────────────────────────────────────────────
 
     @Transactional
     public MedicamentoResponseDTO inactivar(Long id) {
@@ -173,8 +158,6 @@ public class MedicamentoService {
         return mapper.toResponse(medicamento);
     }
 
-    // ─── REACTIVAR ────────────────────────────────────────────────────────────
-
     @Transactional
     public MedicamentoResponseDTO activar(Long id) {
         Medicamento medicamento = obtenerEntidad(id);
@@ -192,22 +175,16 @@ public class MedicamentoService {
         return mapper.toResponse(medicamento);
     }
 
-    // ─── CATEGORÍAS (solo lectura para el frontend) ───────────────────────────
-
     @Transactional(readOnly = true)
     public List<CategoriaMedicamento> listarCategorias() {
         return categoriaRepo.findAll(Sort.by("nombre"));
     }
-
-    // ─── HISTORIAL ────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public Page<HistorialMedicamento> historial(Long medicamentoId, int pagina, int tamano) {
         return historialRepo.findByMedicamentoIdOrderByFechaOperacionDesc(
                 medicamentoId, PageRequest.of(pagina, tamano));
     }
-
-    // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
 
     private Medicamento obtenerEntidad(Long id) {
         return medicamentoRepo.findById(id)
@@ -221,7 +198,6 @@ public class MedicamentoService {
 
     private Trabajador getTrabajadorAutenticado() {
         try {
-            // 1. Intentar recuperar el usuario del contexto de Spring Security
             var authentication = SecurityContextHolder.getContext().getAuthentication();
             
             if (authentication != null && authentication.isAuthenticated() 
@@ -232,7 +208,6 @@ public class MedicamentoService {
                         .orElseGet(() -> obtenerTrabajadorFallback(username));
             }
             
-            // 2. Si es un usuario anónimo o no hay autenticación, usar el fallback
             return obtenerTrabajadorFallback("anonymousUser");
             
         } catch (Exception e) {
@@ -243,7 +218,6 @@ public class MedicamentoService {
 
     private Trabajador obtenerTrabajadorFallback(String usernameIntentado) {
         log.warn("Trabajador '{}' no autenticado de forma válida. Asignando fallback administrativo (ID 1).", usernameIntentado);
-        // Busca el primer trabajador del sistema (ID 1) como auditor por defecto en local
         return TrabajadorRepo.findById(1L)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "Error Crítico: No existe ningún Trabajador base en la tabla (ID 1) para auditoría de respaldo."));
@@ -262,7 +236,6 @@ public class MedicamentoService {
                 .build());
     }
 
-    /** Solo registra auditoría si el valor realmente cambió */
     private void auditarCambio(Medicamento med, String campo, String anterior, String nuevo) {
         if (!anterior.equals(nuevo)) {
             registrarHistorial(med, HistorialMedicamento.TipoOperacion.EDICION, campo, anterior, nuevo);

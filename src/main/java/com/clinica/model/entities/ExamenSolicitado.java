@@ -22,7 +22,6 @@ public class ExamenSolicitado {
     @JoinColumn(name = "atencion_medica_id", nullable = false)
     private AtencionMedica atencionMedica;
 
-    /** Ej: Laboratorio, Imagen, Ecografía, Tomografía */
     @Column(name = "tipo_examen", nullable = false, length = 100)
     private String tipoExamen;
 
@@ -37,7 +36,6 @@ public class ExamenSolicitado {
     @Column(columnDefinition = "TEXT")
     private String resultados;
 
-    /** URL al archivo de resultado (PDF, imagen DICOM, etc.) */
     @Column(name = "url_resultado", length = 500)
     private String urlResultado;
 

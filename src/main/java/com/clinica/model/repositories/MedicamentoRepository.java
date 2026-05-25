@@ -14,18 +14,12 @@ import java.util.Optional;
 @Repository
 public interface MedicamentoRepository extends JpaRepository<Medicamento, Long> {
 
-    /** Verifica si ya existe un código (para validar unicidad en registro) */
     boolean existsByCodigo(String codigo);
 
-    /** Verifica unicidad en edición (excluye el propio registro) */
     boolean existsByCodigoAndIdNot(String codigo, Long id);
 
     Optional<Medicamento> findByCodigo(String codigo);
 
-    /**
-     * Búsqueda paginada con filtros opcionales:
-     * nombre, código, categoría y estado activo/inactivo.
-     */
     @Query("""
         SELECT m FROM Medicamento m
         JOIN FETCH m.categoria c
@@ -41,7 +35,6 @@ public interface MedicamentoRepository extends JpaRepository<Medicamento, Long> 
             @Param("soloActivos") boolean soloActivos,
             Pageable pageable);
 
-    /** Medicamentos con stock por debajo del mínimo */
     @Query("SELECT m FROM Medicamento m WHERE m.activo = TRUE AND m.stockActual <= m.stockMinimo")
     Page<Medicamento> findStockBajo(Pageable pageable);
 }

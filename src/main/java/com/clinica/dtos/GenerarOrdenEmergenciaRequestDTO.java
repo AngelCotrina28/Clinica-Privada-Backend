@@ -3,10 +3,6 @@ package com.clinica.dtos;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-/**
- * DTO de entrada para generar una Orden de Atención de Emergencia.
- * Roles permitidos: JEFE_ENFERMERIA, ADMINISTRADOR
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

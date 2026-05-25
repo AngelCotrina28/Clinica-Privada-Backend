@@ -26,7 +26,6 @@ public class TipoCita {
     @Column(length = 255)
     private String descripcion;
 
-    /** Duración estimada de la cita en minutos */
     @Min(1)
     @Column(name = "duracion_minutos", nullable = false)
     @Builder.Default

@@ -7,10 +7,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Orden de servicio: agrupa los ítems a cobrar por una atención.
- * Puede originarse de una Cita o de una emergencia.
- */
 @Entity
 @Table(name = "ordenes_servicio")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -24,7 +20,6 @@ public class OrdenServicio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Ej: OS-20240001 */
     @Column(name = "numero_orden", nullable = false, unique = true, length = 20)
     private String numeroOrden;
 
@@ -32,12 +27,10 @@ public class OrdenServicio {
     @JoinColumn(name = "paciente_id", nullable = false)
     private Paciente paciente;
 
-    /** Origen consulta externa */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cita_id")
     private Cita cita;
 
-    /** Origen emergencia */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "orden_emergencia_id")
     private OrdenAtencionEmergencia ordenEmergencia;
@@ -55,7 +48,6 @@ public class OrdenServicio {
     @Builder.Default
     private BigDecimal descuento = BigDecimal.ZERO;
 
-    /** IGV (18% en Perú) */
     @Column(nullable = false, precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal igv = BigDecimal.ZERO;

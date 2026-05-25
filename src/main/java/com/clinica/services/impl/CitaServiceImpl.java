@@ -50,7 +50,6 @@ public class CitaServiceImpl implements CitaService {
             
             LocalTime horaSolicitada = request.getFechaHora().toLocalTime();
             
-            // Buscamos el turno específico que contenga la hora solicitada
             Turno turnoCorrecto = turnos.stream()
                 .filter(t -> !horaSolicitada.isBefore(t.getHoraInicio()) && horaSolicitada.isBefore(t.getHoraFin()))
                 .findFirst()
@@ -58,7 +57,6 @@ public class CitaServiceImpl implements CitaService {
 
             if (turnoCorrecto != null) {
                 request.setTurnoId(turnoCorrecto.getId());
-                // Si tampoco nos enviaron consultorio, lo tomamos de este turno exacto
                 if (request.getConsultorioId() == null) {
                     request.setConsultorioId(turnoCorrecto.getConsultorio().getId());
                 }
@@ -69,12 +67,10 @@ public class CitaServiceImpl implements CitaService {
 
         Trabajador creador = obtenerTrabajadorAutenticado(request.getCreadoPorId());
 
-        // 1. OBTENER LA HISTORIA CLÍNICA (NUEVO)
         HistoriaClinica historia = historiaClinicaRepository.findById(request.getHistoriaClinicaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "Historia clinica no encontrada con ID: " + request.getHistoriaClinicaId()));
 
-        // 2. Pasamos la entidad 'historia' directamente en lugar de solo el ID (requiere el ajuste del paso 2)
         Paciente paciente = obtenerOCrearPacienteDesdeHistoria(historia, creador);
 
         Trabajador medico = trabajadorRepository.findById(request.getMedicoId())
@@ -103,7 +99,7 @@ public class CitaServiceImpl implements CitaService {
 
         Cita cita = Cita.builder()
                 .numeroCita(generarNumeroCita(request.getFechaHora()))
-                .historiaClinica(historia) // <--- LÍNEA CRÍTICA AÑADIDA
+                .historiaClinica(historia)
                 .paciente(paciente)
                 .medico(medico)
                 .consultorio(turno.getConsultorio())
@@ -118,7 +114,6 @@ public class CitaServiceImpl implements CitaService {
         return mapToResponseDTO(citaRepository.save(cita));
     }
 
-    // ── MOTOR MENSUAL ──
     @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<com.clinica.dtos.DisponibilidadResponseDTO> consultarDisponibilidad(Long medicoId,

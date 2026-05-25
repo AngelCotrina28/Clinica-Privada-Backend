@@ -67,7 +67,6 @@ public class TrabajadorService {
                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .rol(rol)
                 .activo(true)
-                // --- MAPEO DE NUEVOS CAMPOS ---
                 .telefono(dto.getTelefono())
                 .fechaNacimiento(dto.getFechaNacimiento())
                 .colegiatura(dto.getColegiatura())
@@ -83,21 +82,18 @@ public class TrabajadorService {
         Trabajador trabajador = trabajadorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
         
-        // Si está en true lo pasa a false, y si está en false lo pasa a true
         trabajador.setActivo(!trabajador.isActivo()); 
         
         trabajadorRepository.save(trabajador);
     }
 
     public List<TrabajadorResponseDTO> listarTodos() {
-        // Volvemos a usar findAll()
         return trabajadorRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     public List<TrabajadorResponseDTO> listarMedicosActivos() {
-        // Buscamos ignorando mayúsculas/minúsculas para evitar errores tipográficos en BD
         return trabajadorRepository.findByRolNombreIgnoreCaseAndActivoTrue("MEDICO").stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -136,7 +132,6 @@ public class TrabajadorService {
 
         IdentidadInstitucional identidad = generarIdentidadInstitucional(dto.getNombreCompleto(), id);
 
-        // --- APLICAR TODOS LOS CAMBIOS ---
         trabajador.setDni(dto.getDni());
         trabajador.setNombreCompleto(dto.getNombreCompleto());
         trabajador.setUsername(identidad.username());

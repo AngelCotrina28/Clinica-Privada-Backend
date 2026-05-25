@@ -31,7 +31,6 @@ public class Comprobante {
     @Column(nullable = false)
     private Integer correlativo;
 
-    /** Número completo, ej: B001-00000001 */
     @Column(name = "numero_completo", nullable = false, length = 20)
     private String numeroCompleto;
 
@@ -47,7 +46,6 @@ public class Comprobante {
     @JoinColumn(name = "paciente_id", nullable = false)
     private Paciente paciente;
 
-    /** DNI o RUC del receptor */
     @Column(name = "ruc_dni", length = 15)
     private String rucDni;
 

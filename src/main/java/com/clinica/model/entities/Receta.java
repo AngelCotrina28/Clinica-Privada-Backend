@@ -19,7 +19,6 @@ public class Receta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Número único de receta, ej: RX-20240001 */
     @Column(name = "numero_receta", nullable = false, unique = true, length = 20)
     private String numeroReceta;
 
@@ -47,7 +46,6 @@ public class Receta {
     @Column(name = "fecha_emision", updatable = false)
     private LocalDateTime fechaEmision;
 
-    /** Fecha hasta la que es válida la receta */
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
 }

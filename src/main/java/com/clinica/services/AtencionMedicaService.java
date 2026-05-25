@@ -47,9 +47,6 @@ public class AtencionMedicaService {
                 .build();
     }
 
-    /**
-     * Registra una nueva atención médica vinculando su Cita u Orden correspondiente.
-     */
     @Transactional
     public Long registrarAtencion(com.clinica.dtos.AtencionMedicaRequestDTO request) {
         com.clinica.model.entities.HistoriaClinica historia = historiaRepo.findById(request.getHistoriaClinicaId())
@@ -73,10 +70,8 @@ public class AtencionMedicaService {
             if (codigoLimpio.startsWith("CT")) {
                 citaRepo.findByNumeroCita(codigoLimpio)
                         .filter(cita -> cita.getFechaHoraCita().toLocalDate().equals(hoy))
-                        // Verifica que no esté ya finalizada/atendida
                         .filter(cita -> !cita.getEstado().name().equals("ATENDIDA")) 
                         .ifPresent(cita -> {
-                            // Cambia a ATENDIDA solo al momento de guardar
                             cita.setEstado(com.clinica.model.entities.Cita.EstadoCita.ATENDIDA);
                             atencionBuilder.cita(cita);
                         });
@@ -84,10 +79,8 @@ public class AtencionMedicaService {
             } else if (codigoLimpio.startsWith("OE")) {
                 ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
                         .filter(orden -> orden.getCreatedAt().toLocalDate().equals(hoy))
-                        // Usamos FINALIZADO según tu SQL
                         .filter(orden -> !orden.getEstado().name().equals("FINALIZADO"))
                         .ifPresent(orden -> {
-                            // Cambia a FINALIZADO solo al momento de guardar
                             orden.setEstado(com.clinica.model.entities.OrdenAtencionEmergencia.EstadoOrden.FINALIZADO);
                             atencionBuilder.ordenEmergencia(orden);
                         });
@@ -100,10 +93,6 @@ public class AtencionMedicaService {
         return atencionGuardada.getId();
     }
 
-    /**
-     * Valida en tiempo real para el frontend si el código existe,
-     * es del día de hoy, y está pendiente de atención.
-     */
     @Transactional(readOnly = true)
     public String verificarEstadoCitaUOrden(String codigoAtencion) {
         if (codigoAtencion == null || codigoAtencion.trim().isEmpty()) {

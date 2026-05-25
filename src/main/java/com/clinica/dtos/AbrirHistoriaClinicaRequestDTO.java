@@ -3,10 +3,6 @@ package com.clinica.dtos;
 import jakarta.validation.constraints.*;
 import lombok.*;
  
-/**
- * DTO de entrada para abrir una nueva Historia Clínica.
- * Roles permitidos: RECEPCIONISTA, ENFERMERO, ADMINISTRADOR, JEFE_ENFERMERIA
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,17 +24,11 @@ public class AbrirHistoriaClinicaRequestDTO {
     @Size(max = 150)
     private String email;
  
-    /** Formato: YYYY-MM-DD */
     private String fechaNacimiento;
     
-    /** M / F / O */
     private String genero;
 
     private String direccion;
-    /**
-     * Indica si la historia se abre desde el módulo de Admisión y Consultas.
-     * Si es true, la respuesta incluirá la URL de redirección al flujo de emergencia.
-     */
     @Builder.Default
     private boolean desdeAdmision = false;
 }

@@ -53,20 +53,20 @@ public class Trabajador {
     @JoinColumn(
         name = "rol_id", 
         nullable = false,
-        foreignKey = @ForeignKey(name = "fk_trabajadores_rol") // Nombre personalizado para la FK
+        foreignKey = @ForeignKey(name = "fk_trabajadores_rol")
     )
     private Rol rol;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "trabajador_especialidades", // Nombre de la tabla intermedia
+        name = "trabajador_especialidades",
         joinColumns = @JoinColumn(
             name = "trabajador_id",
-            foreignKey = @ForeignKey(name = "fk_trab_esp_trabajador") // Nombre de la FK hacia Trabajador
+            foreignKey = @ForeignKey(name = "fk_trab_esp_trabajador")
         ),
         inverseJoinColumns = @JoinColumn(
             name = "especialidad_id",
-            foreignKey = @ForeignKey(name = "fk_trab_esp_especialidad") // Nombre de la FK hacia Especialidad
+            foreignKey = @ForeignKey(name = "fk_trab_esp_especialidad")
         )
     )
     @Builder.Default

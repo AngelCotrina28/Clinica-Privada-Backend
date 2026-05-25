@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RolRepository extends JpaRepository<Rol, Long> {
-    // Spring Data JPA ya nos da el método findById() por defecto
 }

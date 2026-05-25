@@ -27,7 +27,6 @@ public class SerieComprobante {
     @Column(name = "tipo_comprobante", nullable = false, length = 15)
     private TipoComprobante tipoComprobante;
 
-    /** B001, F001, BC01, etc. */
     @NotBlank
     @Size(max = 4)
     @Column(nullable = false, length = 4)

@@ -15,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/trabajadores")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Para permitir peticiones desde Angular
+@CrossOrigin(origins = "*")
 public class TrabajadorController {
 
     private final TrabajadorService trabajadorService;
@@ -41,9 +41,6 @@ public class TrabajadorController {
         return ResponseEntity.noContent().build();
     }
 
-    // ====================================================================
-    // ENDPOINT PARA FUTURAS HISTORIAS: GET /api/trabajadores/medicos/activos
-    // ====================================================================
     @GetMapping("/medicos/activos")
     public ResponseEntity<List<TrabajadorResponseDTO>> listarMedicosActivos() {
         return ResponseEntity.ok(trabajadorService.listarMedicosActivos());

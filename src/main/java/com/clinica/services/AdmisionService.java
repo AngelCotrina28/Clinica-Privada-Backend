@@ -20,14 +20,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
-/**
- * Servicio de Admisión y Consultas.
- *
- * Responsabilidades (principio SRP):
- * 1. Buscar historia clínica por DNI.
- * 2. Abrir nueva historia clínica (con prevención de duplicados).
- * 3. Generar Orden de Atención de Emergencia.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,8 +29,6 @@ public class AdmisionService {
         private final OrdenAtencionEmergenciaRepository ordenRepo;
         private final TrabajadorRepository trabajadorRepo;
 
-        // 1. BUSCAR HISTORIA CLÍNICA
-
         @Transactional(readOnly = true)
         public HistoriaClinicaResponseDTO buscarPorDni(String dni) {
                 return historiaRepo.findByDniPaciente(dni.trim())
@@ -47,7 +37,6 @@ public class AdmisionService {
                                                 "No se encontró historia clínica para el DNI: " + dni));
         }
 
-        // 1.1 BUSCAR HISTORIA CLÍNICA POR NÚMERO (Optimización HU08)
         @Transactional(readOnly = true)
         public HistoriaClinicaResponseDTO buscarPorNumeroHistoria(String numeroHistoria) {
                 return historiaRepo.findByNumeroHistoria(numeroHistoria.trim())
@@ -56,30 +45,11 @@ public class AdmisionService {
                                                 "No se encontró historia clínica con el número: " + numeroHistoria));
         }
 
-        // 2. ABRIR NUEVA HISTORIA CLÍNICA
-
-        /**
-         * Abre una nueva historia clínica.
-         *
-         * <p>
-         * Regla de negocio: el DNI es el identificador único del paciente.
-         * Si ya existe una historia con ese DNI, lanza excepción (no se permite
-         * duplicado).
-         * </p>
-         *
-         * <p>
-         * Flujo de Admisión: si {@code desdeAdmision = true}, el DTO de respuesta
-         * incluye un {@code redirectUrl} para que el frontend redirija automáticamente
-         * al formulario de Generar Orden de Emergencia con los datos del paciente
-         * pre-cargados, evitando el reingreso manual.
-         * </p>
-         */
         @Transactional
         public HistoriaClinicaResponseDTO abrirHistoria(AbrirHistoriaClinicaRequestDTO dto) {
 
                 String dniNormalizado = dto.getDniPaciente().trim();
 
-                // ── Prevención de duplicados ─────────────────────────────────────────
                 if (historiaRepo.existsByDniPaciente(dniNormalizado)) {
                         throw new IllegalStateException(
                                         "Ya existe una historia clínica para el DNI: " + dniNormalizado +
@@ -108,13 +78,6 @@ public class AdmisionService {
                 return toHistoriaDTO(historia, true, dto.isDesdeAdmision());
         }
 
-        // 3. GENERAR ORDEN DE ATENCIÓN DE EMERGENCIA ──────────────────────────
-
-        /**
-         * Genera una Orden de Atención de Emergencia.
-         * Solo roles JEFE_ENFERMERIA y ADMINISTRADOR pueden invocar este método
-         * (enforced en el controller con @PreAuthorize).
-         */
         @Transactional
         public OrdenAtencionEmergenciaResponseDTO generarOrdenEmergencia(GenerarOrdenEmergenciaRequestDTO dto) {
 
@@ -127,7 +90,6 @@ public class AdmisionService {
                                 .orElseThrow(() -> new RecursoNoEncontradoException(
                                                 "Médico no encontrado con ID: " + dto.getMedicoId()));
 
-                // Validar que sea efectivamente un médico activo
                 if (!medico.getRol().getNombre().equalsIgnoreCase("MEDICO")) {
                         throw new IllegalArgumentException(
                                         "El trabajador seleccionado no tiene rol de Médico.");
@@ -193,9 +155,6 @@ public class AdmisionService {
                                                 .map(this::toOrdenDTO));
         }
 
-        // ── HELPERS PRIVADOS ─────────────────────────────────────────────────────
-
-        /** Obtiene el Trabajador autenticado desde el SecurityContext */
         private Trabajador getTrabajadorAutenticado() {
                 String username = SecurityContextHolder.getContext()
                                 .getAuthentication().getName();
@@ -204,23 +163,16 @@ public class AdmisionService {
                                                 "Trabajador autenticado no encontrado: " + username));
         }
 
-        /**
-         * Genera número de historia correlativo: HC-00001, HC-00002, ...
-         * Para producción considerar una secuencia de BD o un campo autoincremental
-         * dedicado.
-         */
         private String generarNumeroHistoria() {
                 long total = historiaRepo.count();
                 return String.format("HC-%05d", total + 1);
         }
 
-        /** Genera número de orden correlativo: OE-00001 */
         private String generarNumeroOrden() {
                 long total = ordenRepo.count();
                 return String.format("OE-%05d", total + 1);
         }
 
-        /** Mapea HistoriaClinica → HistoriaClinicaResponseDTO */
         private HistoriaClinicaResponseDTO toHistoriaDTO(
                         HistoriaClinica h, boolean nuevaHistoria, boolean desdeAdmision) {
 
@@ -239,9 +191,6 @@ public class AdmisionService {
                                 .nuevaHistoria(nuevaHistoria)
                                 .build();
 
-                // ── Flujo de Admisión: construir URL de redirección ─────────────────
-                // El frontend usará esta URL para navegar automáticamente al formulario
-                // de Generar Orden de Emergencia con los datos del paciente pre-cargados.
                 if (desdeAdmision) {
                         String nombre = URLEncoder.encode(h.getNombreCompleto(), StandardCharsets.UTF_8);
                         String dni = URLEncoder.encode(h.getDniPaciente(), StandardCharsets.UTF_8);
@@ -260,7 +209,6 @@ public class AdmisionService {
                 return URLEncoder.encode(value, StandardCharsets.UTF_8);
         }
 
-        /** Mapea OrdenAtencionEmergencia → OrdenAtencionEmergenciaResponseDTO */
         private OrdenAtencionEmergenciaResponseDTO toOrdenDTO(OrdenAtencionEmergencia o) {
                 HistoriaClinica h = o.getHistoriaClinica();
                 Trabajador medico = o.getMedico();

@@ -34,7 +34,6 @@ public class AperturaCaja {
     @Column(name = "monto_cierre", precision = 10, scale = 2)
     private BigDecimal montoCierre;
 
-    /** Diferencia entre monto esperado y monto real al cierre */
     @Column(precision = 10, scale = 2)
     private BigDecimal diferencia;
 

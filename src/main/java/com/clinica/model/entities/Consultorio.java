@@ -24,7 +24,6 @@ public class Consultorio {
     @Column(length = 20)
     private String piso;
 
-    /** Especialidad principal del consultorio (opcional) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "especialidad_id")
     private Especialidad especialidad;

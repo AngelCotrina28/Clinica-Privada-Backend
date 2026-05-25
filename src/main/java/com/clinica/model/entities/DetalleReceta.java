@@ -21,15 +21,12 @@ public class DetalleReceta {
     @JoinColumn(name = "medicamento_id", nullable = false)
     private Medicamento medicamento;
 
-    /** Ej: 500mg, 1 tableta */
     @Column(length = 100)
     private String dosis;
 
-    /** Ej: Cada 8 horas, 3 veces al día */
     @Column(length = 100)
     private String frecuencia;
 
-    /** Ej: 7 días, 2 semanas */
     @Column(length = 100)
     private String duracion;
 
@@ -42,7 +39,6 @@ public class DetalleReceta {
     @Builder.Default
     private Integer cantidadDespachada = 0;
 
-    /** Ej: Oral, Intravenosa, Tópica */
     @Column(name = "via_administracion", length = 50)
     private String viaAdministracion;
 

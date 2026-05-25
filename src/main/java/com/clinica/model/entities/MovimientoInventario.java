@@ -39,12 +39,10 @@ public class MovimientoInventario {
     @Column(name = "stock_nuevo", nullable = false)
     private Integer stockNuevo;
 
-    /** Despacho que originó la salida (nullable) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "detalle_despacho_id")
     private DetalleDespacho detalleDespacho;
 
-    /** Lote afectado (nullable) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lote_id")
     private LoteMedicamento lote;

@@ -10,28 +10,12 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * REST Controller — Catálogo de Medicamentos
- *
- * Endpoints:
- *  GET    /api/medicamentos              → listar/buscar (todos los roles)
- *  GET    /api/medicamentos/{id}         → detalle     (todos los roles)
- *  GET    /api/medicamentos/stock-bajo   → alertas     (todos los roles)
- *  POST   /api/medicamentos              → registrar   (solo ADMIN)
- *  PUT    /api/medicamentos/{id}         → editar      (solo ADMIN)
- *  PATCH  /api/medicamentos/{id}/inactivar → inactivar (solo ADMIN)
- *  PATCH  /api/medicamentos/{id}/activar   → activar   (solo ADMIN)
- *  GET    /api/medicamentos/{id}/historial → auditoría (ADMIN)
- *  GET    /api/categorias                → listado de categorías
- */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class MedicamentoController {
 
     private final MedicamentoService service;
-
-    // ── Consulta (cualquier Trabajador autenticado) ──────────────────────────────
 
     @GetMapping("/medicamentos")
     public ResponseEntity<PageResponseDTO<MedicamentoResponseDTO>> buscar(
@@ -63,8 +47,6 @@ public class MedicamentoController {
     public ResponseEntity<?> categorias() {
         return ResponseEntity.ok(service.listarCategorias());
     }
-
-    // ── Gestión (solo ADMIN) ─────────────────────────────────────────────────
 
     @PostMapping("/medicamentos")
     @PreAuthorize("hasRole('ADMINISTRADOR')")

@@ -1,4 +1,4 @@
-package com.clinica.dtos; // Ajusta el paquete si es necesario
+package com.clinica.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,12 +23,10 @@ public class TrabajadorResponseDTO {
     private LocalDate fechaNacimiento;
     private String colegiatura;
     
-    // Solo enviamos el nombre del rol (ej. "Médico"), no todo el objeto Rol
     private Long rolId; 
     private String nombreRol;
     
     private boolean activo;
 
-    // Devolverá algo como: ["Cardiología", "Pediatría"]
     private List<String> especialidades;
 }

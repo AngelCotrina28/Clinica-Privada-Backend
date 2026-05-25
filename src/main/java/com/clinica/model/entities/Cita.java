@@ -19,7 +19,6 @@ public class Cita {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Número de cita autogenerado, ej: CT-20240001 */
     @Column(name = "numero_cita", nullable = false, unique = true, length = 20)
     private String numeroCita;
 
@@ -39,7 +38,6 @@ public class Cita {
     @JoinColumn(name = "historia_clinica_id", nullable = false)
     private HistoriaClinica historiaClinica;
 
-    /** Turno origen de la cita (puede ser nulo si se agenda manualmente) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "turno_id")
     private Turno turno;

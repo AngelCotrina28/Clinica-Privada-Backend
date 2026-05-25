@@ -36,7 +36,6 @@ public class Paciente {
     @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 
-    /** M / F / OTRO */
     @Column(length = 10)
     private String genero;
 
@@ -50,17 +49,12 @@ public class Paciente {
     @Column(columnDefinition = "TEXT")
     private String direccion;
 
-    /** Ej: O+, A-, AB+ */
     @Column(name = "tipo_sangre", length = 5)
     private String tipoSangre;
 
     @Column(columnDefinition = "TEXT")
     private String alergias;
 
-    /**
-     * Referencia lógica a HistoriaClinica sin modificar esa entidad.
-     * Se resuelve en capa de servicio cuando se necesite navegar.
-     */
     @Column(name = "historia_clinica_id")
     private Long historiaClinicaId;
 

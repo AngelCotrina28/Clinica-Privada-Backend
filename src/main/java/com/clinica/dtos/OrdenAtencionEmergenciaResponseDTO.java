@@ -12,13 +12,11 @@ public class OrdenAtencionEmergenciaResponseDTO {
     private Long id;
     private String numeroOrden;
 
-    // Historia Clínica
     private Long historiaClinicaId;
     private String numeroHistoria;
     private String dniPaciente;
     private String nombrePaciente;
 
-    // Médico asignado
     private Long medicoId;
     private String nombreMedico;
     private String especialidadMedico;
