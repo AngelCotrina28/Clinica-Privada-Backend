@@ -1,5 +1,5 @@
-# Etapa 1: Construcción (Build) con Maven y Temurin
-FROM maven:3.9-eclipse-temurin-17 AS build
+# Etapa 1: Construcción (Build) con Maven y Temurin 21
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copiamos el archivo pom.xml y el código fuente
@@ -9,8 +9,8 @@ COPY src ./src
 # Compilamos el proyecto omitiendo los tests
 RUN mvn clean package -DskipTests
 
-# Etapa 2: Ejecución (Run) con Java ligero (Temurin JRE)
-FROM eclipse-temurin:17-jre-alpine
+# Etapa 2: Ejecución (Run) con Java ligero (Temurin JRE 21)
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copiamos el .jar generado en la etapa 1
