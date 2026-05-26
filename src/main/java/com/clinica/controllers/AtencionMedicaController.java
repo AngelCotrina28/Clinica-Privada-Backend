@@ -13,7 +13,6 @@ import java.util.Collections;
 @RestController
 @RequestMapping("/api/atenciones")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class AtencionMedicaController {
 
     private final AtencionMedicaService atencionService;
