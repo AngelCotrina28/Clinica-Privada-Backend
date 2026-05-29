@@ -166,7 +166,11 @@ public class TurnoService {
             Long turnoIgnoradoId) {
         List<Consultorio> candidatos = consultorioRepository.findByEspecialidadIdAndActivoTrueOrderByIdAsc(especialidadId);
         if (candidatos.isEmpty()) {
-            candidatos = consultorioRepository.findByActivoTrueOrderByIdAsc();
+            candidatos = consultorioRepository.findByEspecialidadIsNullAndActivoTrueOrderByIdAsc();
+        }
+        if (candidatos.isEmpty()) {
+            throw new IllegalStateException(
+                    "No hay consultorios activos para la especialidad seleccionada.");
         }
         return candidatos.stream()
                 .filter(c -> !tieneCruceConsultorio(c.getId(), inicioNuevo, finNuevo, turnoIgnoradoId))

@@ -13,5 +13,6 @@ public interface ConsultorioRepository extends JpaRepository<Consultorio, Long> 
     Optional<Consultorio> findFirstByEspecialidadIdAndActivoTrueOrderByIdAsc(Long especialidadId);
     Optional<Consultorio> findFirstByActivoTrueOrderByIdAsc();
     List<Consultorio> findByEspecialidadIdAndActivoTrueOrderByIdAsc(Long especialidadId);
+    List<Consultorio> findByEspecialidadIsNullAndActivoTrueOrderByIdAsc();
     List<Consultorio> findByActivoTrueOrderByIdAsc();
 }
