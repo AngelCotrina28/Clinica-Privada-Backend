@@ -58,7 +58,7 @@ public class AdmisionController {
     }
 
     @PostMapping("/emergencia/orden")
-    @PreAuthorize("hasAnyRole('JEFE_ENFERMERIA','ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ENFERMERO','JEFE_ENFERMERIA','ADMINISTRADOR')")
     public ResponseEntity<OrdenAtencionEmergenciaResponseDTO> generarOrdenEmergencia(
             @Valid @RequestBody GenerarOrdenEmergenciaRequestDTO dto) {
         OrdenAtencionEmergenciaResponseDTO response = admisionService.generarOrdenEmergencia(dto);

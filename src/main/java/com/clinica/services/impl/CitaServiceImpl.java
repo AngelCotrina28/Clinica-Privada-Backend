@@ -119,7 +119,6 @@ public class CitaServiceImpl implements CitaService {
     public List<com.clinica.dtos.DisponibilidadResponseDTO> consultarDisponibilidad(Long medicoId,
             LocalDate fechaInicio, LocalDate fechaFin) {
 
-        var turnos = turnoRepository.findByMedicoIdAndActivoTrue(medicoId);
         var citasExistentes = citaRepository.findByMedicoIdAndFechaHoraCitaBetweenAndEstadoIn(
                 medicoId, fechaInicio.atStartOfDay(), fechaFin.plusDays(1).atStartOfDay(), ESTADOS_QUE_BLOQUEAN);
 
@@ -130,29 +129,20 @@ public class CitaServiceImpl implements CitaService {
             String nombreDia = fechaActual.getDayOfWeek().getDisplayName(
                     java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("es-PE"));
 
-            var turnoDelDia = turnos.stream()
-                    .filter(t -> t.getDiaSemana() == convertirDiaSemana(fechaActual.getDayOfWeek()))
-                    .findFirst();
+            Turno.DiaSemana diaSemana = convertirDiaSemana(fechaActual.getDayOfWeek());
+            List<Turno> turnosDelDia = turnoRepository.findTurnosActivosDelMedico(
+                    medicoId, fechaActual, fechaActual.minusDays(1), diaSemana);
+            Map<LocalDateTime, Cita> citasOcupadas = citasExistentes.stream()
+                    .filter(c -> c.getFechaHoraCita().toLocalDate().equals(fechaActual))
+                    .collect(Collectors.toMap(Cita::getFechaHoraCita, Function.identity(), (a, b) -> a));
 
-            java.util.List<String> horasCalculadas = new java.util.ArrayList<>();
-
-            if (turnoDelDia.isPresent()) {
-                var turno = turnoDelDia.get();
-                LocalTime tiempoActual = turno.getHoraInicio();
-
-                while (tiempoActual.plusMinutes(turno.getDuracionMinutos()).isBefore(turno.getHoraFin())
-                        || tiempoActual.plusMinutes(turno.getDuracionMinutos()).equals(turno.getHoraFin())) {
-
-                    LocalDateTime bloqueEvaluado = LocalDateTime.of(fechaActual, tiempoActual);
-                    boolean estaOcupado = citasExistentes.stream()
-                            .anyMatch(c -> c.getFechaHoraCita().equals(bloqueEvaluado));
-
-                    if (!estaOcupado) {
-                        horasCalculadas.add(tiempoActual.format(DateTimeFormatter.ofPattern("HH:mm")));
-                    }
-                    tiempoActual = tiempoActual.plusMinutes(turno.getDuracionMinutos());
-                }
-            }
+            java.util.List<String> horasCalculadas = turnosDelDia.stream()
+                    .flatMap(turno -> generarBloques(fechaActual, turno, citasOcupadas).stream())
+                    .filter(HorarioBloqueDTO::isDisponible)
+                    .map(bloque -> bloque.getHoraInicio().format(DateTimeFormatter.ofPattern("HH:mm")))
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toList());
 
             agendaCompleta.add(com.clinica.dtos.DisponibilidadResponseDTO.builder()
                     .fecha(fechaActual)

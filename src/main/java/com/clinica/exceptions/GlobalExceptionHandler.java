@@ -3,7 +3,9 @@ package com.clinica.exceptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.FieldError;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -42,6 +44,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleEstadoInvalido(IllegalStateException ex) {
         return buildError(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleIntegridadDatos(DataIntegrityViolationException ex) {
+        return buildError(HttpStatus.CONFLICT, "No se pudo registrar porque ya existe un dato duplicado o invalido.", null);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccesoDenegado(AuthorizationDeniedException ex) {
+        return buildError(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta accion.", null);
     }
 
     @ExceptionHandler(MedicamentoInactivoException.class)

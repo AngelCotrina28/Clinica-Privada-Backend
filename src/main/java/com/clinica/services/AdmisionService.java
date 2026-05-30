@@ -31,10 +31,12 @@ public class AdmisionService {
 
         @Transactional(readOnly = true)
         public HistoriaClinicaResponseDTO buscarPorDni(String dni) {
-                return historiaRepo.findByDniPaciente(dni.trim())
+                String documentoNormalizado = normalizarDocumentoPaciente(dni);
+                return historiaRepo.findByDniPaciente(documentoNormalizado)
                                 .map(h -> toHistoriaDTO(h, false, false))
                                 .orElseThrow(() -> new RecursoNoEncontradoException(
-                                                "No se encontró historia clínica para el DNI: " + dni));
+                                                "No se encontro historia clinica para el DNI/CE: "
+                                                                + documentoNormalizado));
         }
 
         @Transactional(readOnly = true)
@@ -48,7 +50,7 @@ public class AdmisionService {
         @Transactional
         public HistoriaClinicaResponseDTO abrirHistoria(AbrirHistoriaClinicaRequestDTO dto) {
 
-                String dniNormalizado = dto.getDniPaciente().trim();
+                String dniNormalizado = normalizarDocumentoPaciente(dto.getDniPaciente());
 
                 if (historiaRepo.existsByDniPaciente(dniNormalizado)) {
                         throw new IllegalStateException(
@@ -169,8 +171,28 @@ public class AdmisionService {
         }
 
         private String generarNumeroOrden() {
-                long total = ordenRepo.count();
-                return String.format("OE-%05d", total + 1);
+                long correlativo = ordenRepo.count() + 1;
+                String numeroOrden;
+
+                do {
+                        numeroOrden = String.format("OE-%05d", correlativo++);
+                } while (ordenRepo.existsByNumeroOrden(numeroOrden));
+
+                return numeroOrden;
+        }
+
+        private String normalizarDocumentoPaciente(String documento) {
+                if (documento == null || documento.isBlank()) {
+                        throw new IllegalArgumentException("El DNI o CE del paciente es obligatorio.");
+                }
+
+                String normalizado = documento.trim().toUpperCase();
+                if (!normalizado.matches("^[A-Z0-9]{1,9}$")) {
+                        throw new IllegalArgumentException(
+                                        "El DNI/CE solo puede contener letras y numeros y no debe superar 9 caracteres.");
+                }
+
+                return normalizado;
         }
 
         private HistoriaClinicaResponseDTO toHistoriaDTO(
@@ -213,9 +235,11 @@ public class AdmisionService {
                 HistoriaClinica h = o.getHistoriaClinica();
                 Trabajador medico = o.getMedico();
 
-                String especialidades = medico.getEspecialidades().stream()
-                                .map(e -> e.getNombre())
-                                .collect(Collectors.joining(", "));
+                String especialidades = medico.getEspecialidades() == null
+                                ? ""
+                                : medico.getEspecialidades().stream()
+                                                .map(Especialidad::getNombre)
+                                                .collect(Collectors.joining(", "));
 
                 return OrdenAtencionEmergenciaResponseDTO.builder()
                                 .id(o.getId())

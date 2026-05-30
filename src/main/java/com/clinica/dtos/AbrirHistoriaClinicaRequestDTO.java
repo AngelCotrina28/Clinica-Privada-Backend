@@ -10,7 +10,8 @@ import lombok.*;
 public class AbrirHistoriaClinicaRequestDTO {
  
     @NotBlank(message = "El DNI o CE del paciente es obligatorio")
-    @Size(min = 8, max = 12, message = "El DNI/CE debe tener entre 8 y 12 caracteres")
+    @Size(max = 9, message = "El DNI/CE no puede superar 9 caracteres")
+    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "El DNI/CE solo puede contener letras y numeros")
     private String dniPaciente;
  
     @NotBlank(message = "El nombre completo es obligatorio")
