@@ -25,4 +25,9 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
                 LocalDateTime inicio,
                 LocalDateTime fin,
                 Collection<Cita.EstadoCita> estados);
+        
+        List<Cita> findByHistoriaClinicaIdAndEstado(
+                Long historiaClinicaId,
+                Cita.EstadoCita estado);
+
 }

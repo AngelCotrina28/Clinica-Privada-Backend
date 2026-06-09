@@ -1,7 +1,11 @@
 package com.clinica.services;
 
+import com.clinica.dtos.CitaOpcionDTO;
+import java.util.ArrayList;
 import com.clinica.dtos.AtencionMedicaHistorialDTO;
 import com.clinica.model.entities.AtencionMedica;
+import com.clinica.model.entities.Cita;
+import com.clinica.model.entities.OrdenAtencionEmergencia;
 import com.clinica.model.repositories.AtencionMedicaRepository;
 import com.clinica.model.repositories.HistoriaClinicaRepository;
 import com.clinica.model.repositories.TrabajadorRepository;
@@ -122,5 +126,29 @@ public class AtencionMedicaService {
         }
         
         return "NO_EXISTE";
+    }
+
+    @Transactional(readOnly = true)
+    public List<CitaOpcionDTO> obtenerCitasDisponibles(Long historiaId) {
+        List<CitaOpcionDTO> resultado = new ArrayList<>();
+
+        // Citas CONFIRMADAS del paciente
+        citaRepo.findByHistoriaClinicaIdAndEstado(historiaId, Cita.EstadoCita.CONFIRMADA)
+            .forEach(c -> resultado.add(CitaOpcionDTO.builder()
+                .codigo(c.getNumeroCita())
+                .tipo("CITA")
+                .fecha(c.getFechaHoraCita())
+                .build()));
+
+        // Órdenes de emergencia PENDIENTES del paciente
+        ordenAtencionEmergenciaRepo
+            .findByHistoriaClinicaIdAndEstado(historiaId, OrdenAtencionEmergencia.EstadoOrden.PENDIENTE)
+            .forEach(o -> resultado.add(CitaOpcionDTO.builder()
+                .codigo(o.getNumeroOrden())
+                .tipo("EMERGENCIA")
+                .fecha(o.getCreatedAt())
+                .build()));
+
+        return resultado;
     }
 }

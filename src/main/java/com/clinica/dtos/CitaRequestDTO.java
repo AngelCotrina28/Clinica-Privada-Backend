@@ -12,15 +12,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CitaRequestDTO {
 
-    private Long pacienteId;         
-    private Long historiaClinicaId; 
+    private Long pacienteId;
+    private Long historiaClinicaId;
 
-    private Long especialidadId;     
+    private Long especialidadId;
     private Long medicoId;
     private LocalDateTime fechaHora;
     private String motivoConsulta;
 
-    private Long turnoId;        
+    private Long turnoId;
 
     private Long consultorioId;
     private Long tipoCitaId;

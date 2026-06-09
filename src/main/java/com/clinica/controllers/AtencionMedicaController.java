@@ -1,6 +1,7 @@
 package com.clinica.controllers;
 
 import com.clinica.dtos.AtencionMedicaHistorialDTO;
+import com.clinica.dtos.CitaOpcionDTO;
 import com.clinica.services.AtencionMedicaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,4 +39,12 @@ public class AtencionMedicaController {
         
         return ResponseEntity.ok(Collections.singletonMap("estado", estado));
     }
+    
+    @GetMapping("/citas-disponibles/{historiaId}")
+    @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')")
+    public ResponseEntity<List<CitaOpcionDTO>> getCitasDisponibles(
+            @PathVariable Long historiaId) {
+        return ResponseEntity.ok(atencionService.obtenerCitasDisponibles(historiaId));
+    }
+
 }

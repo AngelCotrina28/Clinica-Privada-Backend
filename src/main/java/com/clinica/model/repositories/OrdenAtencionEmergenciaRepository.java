@@ -19,6 +19,9 @@ public interface OrdenAtencionEmergenciaRepository extends JpaRepository<OrdenAt
         Optional<OrdenAtencionEmergencia> findByNumeroOrden(String numeroOrden);
         List<OrdenAtencionEmergencia> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime inicio, LocalDateTime fin);
 
+        List<OrdenAtencionEmergencia> findByHistoriaClinicaIdAndEstado(
+        Long historiaClinicaId, OrdenAtencionEmergencia.EstadoOrden estado);
+
         List<OrdenAtencionEmergencia> findByHistoriaClinicaIdOrderByCreatedAtDesc(Long historiaClinicaId);
 
         @Query("""
