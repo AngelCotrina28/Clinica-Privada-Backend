@@ -11,12 +11,16 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+        private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
         private final TrabajadorRepository trabajadorRepository;
         private final JwtService jwtService;
@@ -32,18 +36,21 @@ public class AuthService {
                 }
 
                 if (trabajador.getPasswordHash() == null || trabajador.getPasswordHash().isBlank()) {
-                        throw new IllegalStateException("El usuario no tiene password_hash configurado.");
+                        logger.error("El usuario {} no tiene password_hash configurado.", trabajador.getUsername());
+                        throw new BadCredentialsException("Credenciales incorrectas");
                 }
 
                 if (!esHashBCrypt(trabajador.getPasswordHash())) {
-                        throw new IllegalStateException("El password_hash del usuario no tiene formato BCrypt valido.");
+                        logger.error("El password_hash del usuario {} no tiene formato BCrypt valido.", trabajador.getUsername());
+                        throw new BadCredentialsException("Credenciales incorrectas");
                 }
 
                 boolean passwordValido;
                 try {
                         passwordValido = passwordEncoder.matches(request.getPassword(), trabajador.getPasswordHash());
                 } catch (IllegalArgumentException e) {
-                        throw new IllegalStateException("El password_hash BCrypt del usuario esta corrupto.");
+                        logger.error("El password_hash BCrypt del usuario {} esta corrupto.", trabajador.getUsername());
+                        throw new BadCredentialsException("Credenciales incorrectas");
                 }
 
                 if (!passwordValido) {
@@ -52,7 +59,7 @@ public class AuthService {
 
                 if (trabajador.getRol() == null || trabajador.getRol().getNombre() == null
                                 || trabajador.getRol().getNombre().isBlank()) {
-                        throw new IllegalStateException("El usuario no tiene un rol valido asociado.");
+                        throw new BadCredentialsException("El usuario no tiene un rol valido asociado.");
                 }
 
                 String nombreRol = trabajador.getRol().getNombre();

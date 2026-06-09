@@ -11,6 +11,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.Map;
 
 @RestController
@@ -23,7 +24,7 @@ public class AuthController {
         private final AuthService authService;
 
         @PostMapping("/login")
-        public ResponseEntity<?> login(@RequestBody AuthLoginRequestDTO request) {
+        public ResponseEntity<?> login(@Valid @RequestBody AuthLoginRequestDTO request) {
                 logger.info("> Intento de login para el usuario: {}", request.getUsername());
 
                 try {
@@ -37,17 +38,10 @@ public class AuthController {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("mensaje", e.getMessage()));
 
-                } catch (IllegalStateException e) {
-                        logger.error("Configuracion invalida de usuario en login: {}", e.getMessage());
-                        return ResponseEntity.status(HttpStatus.CONFLICT)
-                                        .body(Map.of("mensaje", e.getMessage()));
-
                 } catch (Exception e) {
                         logger.error("Error crítico no controlado en login: ", e);
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(Map.of(
-                                                        "mensaje", "Error interno en login",
-                                                        "detalle", e.getClass().getSimpleName() + ": " + e.getMessage()));
+                                        .body(Map.of("mensaje", "Error interno en login"));
                 }
         }
 
