@@ -3,49 +3,61 @@ package com.clinica.services;
 import com.clinica.dtos.MedicamentoRequestDTO;
 import com.clinica.dtos.MedicamentoResponseDTO;
 import com.clinica.dtos.PageResponseDTO;
-
+import com.clinica.exceptions.CodigoDuplicadoException;
+import com.clinica.exceptions.MedicamentoInactivoException;
+import com.clinica.exceptions.RecursoNoEncontradoException;
+import com.clinica.mappers.MedicamentoMapper;
 import com.clinica.model.entities.CategoriaMedicamento;
 import com.clinica.model.entities.HistorialMedicamento;
 import com.clinica.model.entities.Medicamento;
 import com.clinica.model.entities.Trabajador;
-
-import com.clinica.mappers.MedicamentoMapper;
 import com.clinica.model.repositories.CategoriaMedicamentoRepository;
 import com.clinica.model.repositories.HistorialMedicamentoRepository;
 import com.clinica.model.repositories.MedicamentoRepository;
 import com.clinica.model.repositories.TrabajadorRepository;
-
-import com.clinica.exceptions.CodigoDuplicadoException;
-import com.clinica.exceptions.MedicamentoInactivoException;
-import com.clinica.exceptions.RecursoNoEncontradoException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MedicamentoService {
 
-    private final MedicamentoRepository       medicamentoRepo;
+    private static final int PAGE_SIZE_DEFAULT = 20;
+    private static final int PAGE_SIZE_MAX = 100;
+    private static final Map<String, String> CAMPOS_ORDEN_MEDICAMENTO = Map.of(
+            "codigo", "codigo",
+            "nombre", "nombre",
+            "precioUnitario", "precioUnitario",
+            "stockActual", "stockActual",
+            "stockMinimo", "stockMinimo",
+            "createdAt", "createdAt");
+
+    private final MedicamentoRepository medicamentoRepo;
     private final CategoriaMedicamentoRepository categoriaRepo;
     private final HistorialMedicamentoRepository historialRepo;
-    private final TrabajadorRepository           TrabajadorRepo;
-    private final MedicamentoMapper           mapper;
+    private final TrabajadorRepository trabajadorRepo;
+    private final MedicamentoMapper mapper;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<MedicamentoResponseDTO> buscar(
             String nombre, String codigo, Integer categoriaId,
             boolean soloActivos, int pagina, int tamano, String ordenarPor) {
 
-        Sort sort = Sort.by(Sort.Direction.ASC, ordenarPor != null ? ordenarPor : "nombre");
-        Pageable pageable = PageRequest.of(pagina, tamano, sort);
+        Pageable pageable = PageRequest.of(
+                normalizarPagina(pagina),
+                normalizarTamano(tamano),
+                Sort.by(Sort.Direction.ASC, resolverCampoOrden(ordenarPor)));
 
         Page<MedicamentoResponseDTO> resultado = medicamentoRepo
                 .buscar(nombre, codigo, categoriaId, soloActivos, pageable)
@@ -61,18 +73,21 @@ public class MedicamentoService {
 
     @Transactional(readOnly = true)
     public PageResponseDTO<MedicamentoResponseDTO> stockBajo(int pagina, int tamano) {
-        Pageable pageable = PageRequest.of(pagina, tamano, Sort.by("stockActual"));
+        Pageable pageable = PageRequest.of(
+                normalizarPagina(pagina),
+                normalizarTamano(tamano),
+                Sort.by("stockActual"));
         return PageResponseDTO.of(medicamentoRepo.findStockBajo(pageable).map(mapper::toResponse));
     }
 
     @Transactional
     public MedicamentoResponseDTO registrar(MedicamentoRequestDTO dto) {
         if (medicamentoRepo.existsByCodigo(dto.getCodigo())) {
-            throw new CodigoDuplicadoException("Ya existe un medicamento con el código: " + dto.getCodigo());
+            throw new CodigoDuplicadoException("Ya existe un medicamento con el codigo: " + dto.getCodigo());
         }
 
         CategoriaMedicamento categoria = obtenerCategoria(dto.getCategoriaId());
-        Trabajador TrabajadorActual = getTrabajadorAutenticado();
+        Trabajador trabajadorActual = getTrabajadorAutenticado();
 
         Medicamento medicamento = Medicamento.builder()
                 .codigo(dto.getCodigo())
@@ -87,7 +102,7 @@ public class MedicamentoService {
                 .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0)
                 .requiereReceta(dto.isRequiereReceta())
                 .activo(true)
-                .createdBy(TrabajadorActual)
+                .createdBy(trabajadorActual)
                 .build();
 
         medicamento = medicamentoRepo.save(medicamento);
@@ -95,7 +110,7 @@ public class MedicamentoService {
         registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.CREACION,
                 null, null, null);
 
-        log.info("Medicamento registrado: {} por Trabajador {}", medicamento.getCodigo(), TrabajadorActual.getUsername());
+        log.info("Medicamento registrado: {} por trabajador {}", medicamento.getCodigo(), trabajadorActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -108,11 +123,10 @@ public class MedicamentoService {
         }
 
         if (medicamentoRepo.existsByCodigoAndIdNot(dto.getCodigo(), id)) {
-            throw new CodigoDuplicadoException(
-                    "Ya existe otro medicamento con el código: " + dto.getCodigo());
+            throw new CodigoDuplicadoException("Ya existe otro medicamento con el codigo: " + dto.getCodigo());
         }
 
-        Trabajador TrabajadorActual = getTrabajadorAutenticado();
+        Trabajador trabajadorActual = getTrabajadorAutenticado();
 
         auditarCambio(medicamento, "precio_unitario",
                 medicamento.getPrecioUnitario().toPlainString(),
@@ -132,10 +146,10 @@ public class MedicamentoService {
         medicamento.setStockActual(dto.getStockInicial());
         medicamento.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0);
         medicamento.setRequiereReceta(dto.isRequiereReceta());
-        medicamento.setUpdatedBy(TrabajadorActual);
+        medicamento.setUpdatedBy(trabajadorActual);
 
         medicamento = medicamentoRepo.save(medicamento);
-        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), TrabajadorActual.getUsername());
+        log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), trabajadorActual.getUsername());
         return mapper.toResponse(medicamento);
     }
 
@@ -182,8 +196,9 @@ public class MedicamentoService {
 
     @Transactional(readOnly = true)
     public Page<HistorialMedicamento> historial(Long medicamentoId, int pagina, int tamano) {
+        obtenerEntidad(medicamentoId);
         return historialRepo.findByMedicamentoIdOrderByFechaOperacionDesc(
-                medicamentoId, PageRequest.of(pagina, tamano));
+                medicamentoId, PageRequest.of(normalizarPagina(pagina), normalizarTamano(tamano)));
     }
 
     private Medicamento obtenerEntidad(Long id) {
@@ -193,34 +208,21 @@ public class MedicamentoService {
 
     private CategoriaMedicamento obtenerCategoria(Integer catId) {
         return categoriaRepo.findById(catId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Categoría no encontrada: " + catId));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Categoria no encontrada: " + catId));
     }
 
     private Trabajador getTrabajadorAutenticado() {
-        try {
-            var authentication = SecurityContextHolder.getContext().getAuthentication();
-            
-            if (authentication != null && authentication.isAuthenticated() 
-                    && !authentication.getName().equals("anonymousUser")) {
-                
-                String username = authentication.getName();
-                return TrabajadorRepo.findByUsername(username)
-                        .orElseGet(() -> obtenerTrabajadorFallback(username));
-            }
-            
-            return obtenerTrabajadorFallback("anonymousUser");
-            
-        } catch (Exception e) {
-            log.warn("Error al recuperar contexto de seguridad, usando Trabajador por defecto: {}", e.getMessage());
-            return obtenerTrabajadorFallback("emergencyFallback");
-        }
-    }
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    private Trabajador obtenerTrabajadorFallback(String usernameIntentado) {
-        log.warn("Trabajador '{}' no autenticado de forma válida. Asignando fallback administrativo (ID 1).", usernameIntentado);
-        return TrabajadorRepo.findById(1L)
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            throw new IllegalStateException("No se pudo identificar al trabajador autenticado.");
+        }
+
+        String username = authentication.getName();
+        return trabajadorRepo.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "Error Crítico: No existe ningún Trabajador base en la tabla (ID 1) para auditoría de respaldo."));
+                        "Trabajador autenticado no encontrado: " + username));
     }
 
     private void registrarHistorial(Medicamento med,
@@ -240,5 +242,27 @@ public class MedicamentoService {
         if (!anterior.equals(nuevo)) {
             registrarHistorial(med, HistorialMedicamento.TipoOperacion.EDICION, campo, anterior, nuevo);
         }
+    }
+
+    private int normalizarPagina(int pagina) {
+        return Math.max(pagina, 0);
+    }
+
+    private int normalizarTamano(int tamano) {
+        if (tamano <= 0) {
+            return PAGE_SIZE_DEFAULT;
+        }
+        return Math.min(tamano, PAGE_SIZE_MAX);
+    }
+
+    private String resolverCampoOrden(String ordenarPor) {
+        if (ordenarPor == null || ordenarPor.isBlank()) {
+            return "nombre";
+        }
+        String campo = CAMPOS_ORDEN_MEDICAMENTO.get(ordenarPor.trim());
+        if (campo == null) {
+            throw new IllegalArgumentException("Campo de ordenamiento no permitido: " + ordenarPor);
+        }
+        return campo;
     }
 }

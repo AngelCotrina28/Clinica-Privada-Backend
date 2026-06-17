@@ -1,11 +1,13 @@
 package com.clinica.config;
 
 import com.clinica.services.JwtService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,27 +16,27 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
+    private final JwtService jwtService;
+    private final ObjectProvider<UserDetailsService> userDetailsServiceProvider;
 
-    @Lazy
-    @Autowired
-    private UserDetailsService userDetailsService;
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            ObjectProvider<UserDetailsService> userDetailsServiceProvider) {
+        this.jwtService = jwtService;
+        this.userDetailsServiceProvider = userDetailsServiceProvider;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
+    protected void doFilterInternal(
+            HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+            FilterChain filterChain) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -49,31 +51,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtService.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetailsService userDetailsService = userDetailsServiceProvider.getObject();
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                     var authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
 
             filterChain.doFilter(request, response);
-
         } catch (ExpiredJwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.setHeader("Access-Control-Allow-Origin", "*");
-            response.getWriter().write("{\"error\":\"Token expirado\",\"code\":\"TOKEN_EXPIRED\"}");
-            return;
-            
+            SecurityContextHolder.clearContext();
+            escribirRespuestaNoAutorizada(response, "Token expirado", "TOKEN_EXPIRED");
         } catch (JwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.setHeader("Access-Control-Allow-Origin", "*");
-            response.getWriter().write("{\"error\":\"Token inválido\",\"code\":\"TOKEN_INVALID\"}");
-            return;
+            SecurityContextHolder.clearContext();
+            escribirRespuestaNoAutorizada(response, "Token invalido", "TOKEN_INVALID");
         }
+    }
+
+    private void escribirRespuestaNoAutorizada(
+            HttpServletResponse response,
+            String mensaje,
+            String codigo) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\":\"%s\",\"code\":\"%s\"}".formatted(mensaje, codigo));
     }
 }

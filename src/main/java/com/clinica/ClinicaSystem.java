@@ -21,9 +21,11 @@ public class ClinicaSystem {
 			.ignoreIfMissing()
 			.load();
 
-		dotenv.entries().forEach(e ->
-			System.setProperty(e.getKey(), e.getValue())
-		);
+		dotenv.entries().forEach(e -> {
+			if (System.getProperty(e.getKey()) == null && System.getenv(e.getKey()) == null) {
+				System.setProperty(e.getKey(), e.getValue());
+			}
+		});
 
 		SpringApplication.run(ClinicaSystem.class, args);
 	}

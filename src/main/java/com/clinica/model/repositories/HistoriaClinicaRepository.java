@@ -10,9 +10,9 @@ public interface HistoriaClinicaRepository extends JpaRepository<HistoriaClinica
 
     boolean existsByDniPaciente(String dniPaciente);
 
+    boolean existsByNumeroHistoria(String numeroHistoria);
+
     Optional<HistoriaClinica> findByDniPaciente(String dniPaciente);
 
     Optional<HistoriaClinica> findByNumeroHistoria(String numeroHistoria);
-
-    long count();
 }

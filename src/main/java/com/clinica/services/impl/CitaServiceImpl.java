@@ -17,11 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,29 +43,14 @@ public class CitaServiceImpl implements CitaService {
     @Override
     @Transactional
     public CitaResponseDTO programarCita(CitaRequestDTO request) {
+        validarDatosMinimosParaProgramar(request);
         if (request.getTurnoId() == null) {
-            Turno.DiaSemana diaSemana = convertirDiaSemana(request.getFechaHora().getDayOfWeek());
-            List<Turno> turnos = turnoRepository.findTurnosActivosDelMedico(
-                    request.getMedicoId(), request.getFechaHora().toLocalDate(), request.getFechaHora().toLocalDate().minusDays(1), diaSemana);
-            
-            LocalTime horaSolicitada = request.getFechaHora().toLocalTime();
-            
-            Turno turnoCorrecto = turnos.stream()
-                .filter(t -> !horaSolicitada.isBefore(t.getHoraInicio()) && horaSolicitada.isBefore(t.getHoraFin()))
-                .findFirst()
-                .orElse(!turnos.isEmpty() ? turnos.get(0) : null);
-
-            if (turnoCorrecto != null) {
-                request.setTurnoId(turnoCorrecto.getId());
-                if (request.getConsultorioId() == null) {
-                    request.setConsultorioId(turnoCorrecto.getConsultorio().getId());
-                }
-            }
+            asignarTurnoAutomatico(request);
         }
 
         validarRequest(request);
 
-        Trabajador creador = obtenerTrabajadorAutenticado(request.getCreadoPorId());
+        Trabajador creador = obtenerTrabajadorAutenticado();
 
         HistoriaClinica historia = historiaClinicaRepository.findById(request.getHistoriaClinicaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException(
@@ -268,12 +253,38 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private void validarRequest(CitaRequestDTO request) {
+        if (request.getTurnoId() == null) throw new IllegalArgumentException("Debe seleccionar un bloque horario.");
+    }
+
+    private void validarDatosMinimosParaProgramar(CitaRequestDTO request) {
         if (request.getHistoriaClinicaId() == null && request.getPacienteId() == null) {
             throw new IllegalArgumentException("Debe seleccionar una historia clinica o paciente.");
         }
         if (request.getMedicoId() == null) throw new IllegalArgumentException("Debe seleccionar un medico.");
-        if (request.getTurnoId() == null) throw new IllegalArgumentException("Debe seleccionar un bloque horario.");
         if (request.getFechaHora() == null) throw new IllegalArgumentException("Debe seleccionar fecha y hora.");
+    }
+
+    private void asignarTurnoAutomatico(CitaRequestDTO request) {
+        Turno.DiaSemana diaSemana = convertirDiaSemana(request.getFechaHora().getDayOfWeek());
+        List<Turno> turnos = turnoRepository.findTurnosActivosDelMedico(
+                request.getMedicoId(),
+                request.getFechaHora().toLocalDate(),
+                request.getFechaHora().toLocalDate().minusDays(1),
+                diaSemana);
+
+        Turno turnoCorrecto = turnos.stream()
+                .filter(t -> !request.getFechaHora().isBefore(inicioTurno(t, request.getFechaHora().toLocalDate()))
+                        && !request.getFechaHora().plusMinutes(t.getDuracionMinutos())
+                                .isAfter(finTurno(t, request.getFechaHora().toLocalDate())))
+                .findFirst()
+                .orElse(null);
+
+        if (turnoCorrecto != null) {
+            request.setTurnoId(turnoCorrecto.getId());
+            if (request.getConsultorioId() == null) {
+                request.setConsultorioId(turnoCorrecto.getConsultorio().getId());
+            }
+        }
     }
 
     private void validarTurno(CitaRequestDTO request, Trabajador medico, Turno turno) {
@@ -330,21 +341,22 @@ public class CitaServiceImpl implements CitaService {
         return trabajador.getRol() != null && "MEDICO".equalsIgnoreCase(trabajador.getRol().getNombre());
     }
 
-    private Trabajador obtenerTrabajadorAutenticado(Long creadoPorIdFallback) {
+    private Trabajador obtenerTrabajadorAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && auth.getName() != null && !"anonymousUser".equals(auth.getName())) {
             return trabajadorRepository.findByUsername(auth.getName())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Usuario autenticado no encontrado."));
         }
-        if (creadoPorIdFallback != null) {
-            return trabajadorRepository.findById(creadoPorIdFallback)
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Usuario creador no encontrado."));
-        }
         throw new IllegalArgumentException("No se pudo identificar al usuario.");
     }
 
     private String generarNumeroCita(LocalDateTime fechaHora) {
-        return "CT-" + fechaHora.format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + String.format("%06d", Math.abs(System.nanoTime() % 1_000_000));
+        String numeroCita;
+        do {
+            String token = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+            numeroCita = "CT-" + fechaHora.format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + token;
+        } while (citaRepository.existsByNumeroCita(numeroCita));
+        return numeroCita;
     }
 
     private Turno.DiaSemana convertirDiaSemana(DayOfWeek dayOfWeek) {

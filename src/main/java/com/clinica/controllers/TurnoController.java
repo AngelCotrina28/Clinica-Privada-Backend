@@ -3,6 +3,7 @@ package com.clinica.controllers;
 import com.clinica.dtos.TurnoRequestDTO;
 import com.clinica.dtos.TurnoResponseDTO;
 import com.clinica.services.TurnoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,13 +30,13 @@ public class TurnoController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<TurnoResponseDTO> crear(@RequestBody TurnoRequestDTO dto) {
+    public ResponseEntity<TurnoResponseDTO> crear(@Valid @RequestBody TurnoRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(turnoService.crear(dto));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<TurnoResponseDTO> actualizar(@PathVariable Long id, @RequestBody TurnoRequestDTO dto) {
+    public ResponseEntity<TurnoResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody TurnoRequestDTO dto) {
         return ResponseEntity.ok(turnoService.actualizar(id, dto));
     }
 

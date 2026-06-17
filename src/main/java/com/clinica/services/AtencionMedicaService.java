@@ -1,23 +1,26 @@
 package com.clinica.services;
 
-import com.clinica.dtos.CitaOpcionDTO;
-import java.util.ArrayList;
 import com.clinica.dtos.AtencionMedicaHistorialDTO;
+import com.clinica.dtos.AtencionMedicaRequestDTO;
+import com.clinica.dtos.CitaOpcionDTO;
+import com.clinica.exceptions.RecursoNoEncontradoException;
 import com.clinica.model.entities.AtencionMedica;
 import com.clinica.model.entities.Cita;
+import com.clinica.model.entities.HistoriaClinica;
 import com.clinica.model.entities.OrdenAtencionEmergencia;
+import com.clinica.model.entities.Trabajador;
 import com.clinica.model.repositories.AtencionMedicaRepository;
-import com.clinica.model.repositories.HistoriaClinicaRepository;
-import com.clinica.model.repositories.TrabajadorRepository;
 import com.clinica.model.repositories.CitaRepository;
+import com.clinica.model.repositories.HistoriaClinicaRepository;
 import com.clinica.model.repositories.OrdenAtencionEmergenciaRepository;
+import com.clinica.model.repositories.TrabajadorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +37,170 @@ public class AtencionMedicaService {
         return atencionRepo.findByHistoriaClinicaIdOrderByFechaHoraInicioDesc(historiaId)
                 .stream()
                 .map(this::mapToHistorialDTO)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    @Transactional
+    public Long registrarAtencion(AtencionMedicaRequestDTO request) {
+        HistoriaClinica historia = historiaRepo.findById(request.getHistoriaClinicaId())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Historia clinica no encontrada con ID: " + request.getHistoriaClinicaId()));
+
+        Trabajador medico = trabajadorRepo.findById(request.getMedicoId())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Medico no encontrado con ID: " + request.getMedicoId()));
+        validarMedicoActivo(medico);
+
+        AtencionMedica.AtencionMedicaBuilder atencionBuilder = AtencionMedica.builder()
+                .historiaClinica(historia)
+                .medico(medico)
+                .diagnosticoPrincipal(request.getDiagnosticoPrincipal())
+                .observaciones(request.getNotasEvolucion());
+
+        if (request.getNumeroCita() != null && !request.getNumeroCita().isBlank()) {
+            vincularCodigoAtencion(request.getNumeroCita().trim(), historia, medico, atencionBuilder);
+        }
+
+        return atencionRepo.save(atencionBuilder.build()).getId();
+    }
+
+    @Transactional(readOnly = true)
+    public String verificarEstadoCitaUOrden(String codigoAtencion) {
+        if (codigoAtencion == null || codigoAtencion.trim().isEmpty()) {
+            return "NO_EXISTE";
+        }
+
+        String codigoLimpio = codigoAtencion.trim();
+        LocalDate hoy = LocalDate.now();
+
+        if (codigoLimpio.startsWith("CT")) {
+            return citaRepo.findByNumeroCita(codigoLimpio)
+                    .map(cita -> estadoCita(cita, hoy))
+                    .orElse("NO_EXISTE");
+        }
+
+        if (codigoLimpio.startsWith("OE")) {
+            return ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
+                    .map(orden -> estadoOrden(orden, hoy))
+                    .orElse("NO_EXISTE");
+        }
+
+        return "NO_EXISTE";
+    }
+
+    @Transactional(readOnly = true)
+    public List<CitaOpcionDTO> obtenerCitasDisponibles(Long historiaId) {
+        List<CitaOpcionDTO> resultado = new ArrayList<>();
+
+        citaRepo.findByHistoriaClinicaIdAndEstado(historiaId, Cita.EstadoCita.CONFIRMADA)
+                .forEach(c -> resultado.add(CitaOpcionDTO.builder()
+                        .codigo(c.getNumeroCita())
+                        .tipo("CITA")
+                        .fecha(c.getFechaHoraCita())
+                        .build()));
+
+        ordenAtencionEmergenciaRepo
+                .findByHistoriaClinicaIdAndEstado(historiaId, OrdenAtencionEmergencia.EstadoOrden.PENDIENTE)
+                .forEach(o -> resultado.add(CitaOpcionDTO.builder()
+                        .codigo(o.getNumeroOrden())
+                        .tipo("EMERGENCIA")
+                        .fecha(o.getCreatedAt())
+                        .build()));
+
+        return resultado;
+    }
+
+    private void vincularCodigoAtencion(
+            String codigo,
+            HistoriaClinica historia,
+            Trabajador medico,
+            AtencionMedica.AtencionMedicaBuilder atencionBuilder) {
+        if (codigo.startsWith("CT")) {
+            Cita cita = citaRepo.findByNumeroCita(codigo)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Cita no encontrada: " + codigo));
+            validarCitaAtendible(cita, historia, medico);
+            cita.setEstado(Cita.EstadoCita.ATENDIDA);
+            atencionBuilder.cita(cita);
+            atencionBuilder.motivoConsulta(cita.getMotivoConsulta());
+            return;
+        }
+
+        if (codigo.startsWith("OE")) {
+            OrdenAtencionEmergencia orden = ordenAtencionEmergenciaRepo.findByNumeroOrden(codigo)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Orden de emergencia no encontrada: " + codigo));
+            validarOrdenAtendible(orden, historia, medico);
+            orden.setEstado(OrdenAtencionEmergencia.EstadoOrden.FINALIZADO);
+            atencionBuilder.ordenEmergencia(orden);
+            atencionBuilder.motivoConsulta(orden.getMotivo());
+            return;
+        }
+
+        throw new IllegalArgumentException("Codigo de atencion no reconocido.");
+    }
+
+    private void validarCitaAtendible(Cita cita, HistoriaClinica historia, Trabajador medico) {
+        if (!cita.getFechaHoraCita().toLocalDate().equals(LocalDate.now())) {
+            throw new IllegalStateException("La cita no corresponde a la fecha actual.");
+        }
+        if (!cita.getHistoriaClinica().getId().equals(historia.getId())) {
+            throw new IllegalArgumentException("La cita no pertenece a la historia clinica indicada.");
+        }
+        if (!cita.getMedico().getId().equals(medico.getId())) {
+            throw new IllegalArgumentException("La cita no pertenece al medico indicado.");
+        }
+        if (cita.getEstado() != Cita.EstadoCita.CONFIRMADA) {
+            throw new IllegalStateException("La cita no esta disponible para atencion.");
+        }
+    }
+
+    private void validarOrdenAtendible(OrdenAtencionEmergencia orden, HistoriaClinica historia, Trabajador medico) {
+        if (!orden.getCreatedAt().toLocalDate().equals(LocalDate.now())) {
+            throw new IllegalStateException("La orden no corresponde a la fecha actual.");
+        }
+        if (!orden.getHistoriaClinica().getId().equals(historia.getId())) {
+            throw new IllegalArgumentException("La orden no pertenece a la historia clinica indicada.");
+        }
+        if (!orden.getMedico().getId().equals(medico.getId())) {
+            throw new IllegalArgumentException("La orden no pertenece al medico indicado.");
+        }
+        if (orden.getEstado() != OrdenAtencionEmergencia.EstadoOrden.PENDIENTE) {
+            throw new IllegalStateException("La orden no esta disponible para atencion.");
+        }
+    }
+
+    private void validarMedicoActivo(Trabajador medico) {
+        if (medico.getRol() == null || !"MEDICO".equalsIgnoreCase(medico.getRol().getNombre())) {
+            throw new IllegalArgumentException("El trabajador indicado no tiene rol MEDICO.");
+        }
+        if (!medico.isActivo()) {
+            throw new IllegalStateException("El medico indicado no esta activo.");
+        }
+    }
+
+    private String estadoCita(Cita cita, LocalDate hoy) {
+        if (!cita.getFechaHoraCita().toLocalDate().equals(hoy)) {
+            return "OTRA_FECHA";
+        }
+        if (cita.getEstado() == Cita.EstadoCita.ATENDIDA) {
+            return "ATENDIDA";
+        }
+        if (cita.getEstado() == Cita.EstadoCita.CONFIRMADA) {
+            return "VALIDA";
+        }
+        return "NO_DISPONIBLE";
+    }
+
+    private String estadoOrden(OrdenAtencionEmergencia orden, LocalDate hoy) {
+        if (!orden.getCreatedAt().toLocalDate().equals(hoy)) {
+            return "OTRA_FECHA";
+        }
+        if (orden.getEstado() == OrdenAtencionEmergencia.EstadoOrden.FINALIZADO) {
+            return "ATENDIDA";
+        }
+        if (orden.getEstado() == OrdenAtencionEmergencia.EstadoOrden.PENDIENTE) {
+            return "VALIDA";
+        }
+        return "NO_DISPONIBLE";
     }
 
     private AtencionMedicaHistorialDTO mapToHistorialDTO(AtencionMedica a) {
@@ -49,106 +215,5 @@ public class AtencionMedicaService {
                 .diagnosticoSecundario(a.getDiagnosticoSecundario())
                 .tratamiento(a.getTratamiento())
                 .build();
-    }
-
-    @Transactional
-    public Long registrarAtencion(com.clinica.dtos.AtencionMedicaRequestDTO request) {
-        com.clinica.model.entities.HistoriaClinica historia = historiaRepo.findById(request.getHistoriaClinicaId())
-                .orElseThrow(() -> new RuntimeException("Historia clínica no encontrada con ID: " + request.getHistoriaClinicaId()));
-
-        com.clinica.model.entities.Trabajador medico = trabajadorRepo.findById(request.getMedicoId())
-                .orElseThrow(() -> new RuntimeException("Médico no encontrado con ID: " + request.getMedicoId()));
-
-        AtencionMedica.AtencionMedicaBuilder atencionBuilder = AtencionMedica.builder()
-                .historiaClinica(historia)
-                .medico(medico)
-                .diagnosticoPrincipal(request.getDiagnosticoPrincipal())
-                .observaciones(request.getNotasEvolucion());
-
-        String codigo = request.getNumeroCita(); 
-        LocalDate hoy = LocalDate.now(); 
-        
-        if (codigo != null && !codigo.trim().isEmpty()) {
-            String codigoLimpio = codigo.trim();
-            
-            if (codigoLimpio.startsWith("CT")) {
-                citaRepo.findByNumeroCita(codigoLimpio)
-                        .filter(cita -> cita.getFechaHoraCita().toLocalDate().equals(hoy))
-                        .filter(cita -> !cita.getEstado().name().equals("ATENDIDA")) 
-                        .ifPresent(cita -> {
-                            cita.setEstado(com.clinica.model.entities.Cita.EstadoCita.ATENDIDA);
-                            atencionBuilder.cita(cita);
-                        });
-                        
-            } else if (codigoLimpio.startsWith("OE")) {
-                ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
-                        .filter(orden -> orden.getCreatedAt().toLocalDate().equals(hoy))
-                        .filter(orden -> !orden.getEstado().name().equals("FINALIZADO"))
-                        .ifPresent(orden -> {
-                            orden.setEstado(com.clinica.model.entities.OrdenAtencionEmergencia.EstadoOrden.FINALIZADO);
-                            atencionBuilder.ordenEmergencia(orden);
-                        });
-            }
-        }
-
-        AtencionMedica nuevaAtencion = atencionBuilder.build();
-        AtencionMedica atencionGuardada = atencionRepo.save(nuevaAtencion);
-
-        return atencionGuardada.getId();
-    }
-
-    @Transactional(readOnly = true)
-    public String verificarEstadoCitaUOrden(String codigoAtencion) {
-        if (codigoAtencion == null || codigoAtencion.trim().isEmpty()) {
-            return "NO_EXISTE";
-        }
-
-        String codigoLimpio = codigoAtencion.trim();
-        LocalDate hoy = LocalDate.now();
-
-        if (codigoLimpio.startsWith("CT")) {
-            return citaRepo.findByNumeroCita(codigoLimpio)
-                    .map(cita -> {
-                        if (!cita.getFechaHoraCita().toLocalDate().equals(hoy)) return "OTRA_FECHA";
-                        if (cita.getEstado().name().equals("ATENDIDA")) return "ATENDIDA";
-                        return "VALIDA";
-                    })
-                    .orElse("NO_EXISTE");
-                    
-        } else if (codigoLimpio.startsWith("OE")) {
-            return ordenAtencionEmergenciaRepo.findByNumeroOrden(codigoLimpio)
-                    .map(orden -> {
-                        if (!orden.getCreatedAt().toLocalDate().equals(hoy)) return "OTRA_FECHA";
-                        if (orden.getEstado().name().equals("FINALIZADO")) return "ATENDIDA";
-                        return "VALIDA";
-                    })
-                    .orElse("NO_EXISTE");
-        }
-        
-        return "NO_EXISTE";
-    }
-
-    @Transactional(readOnly = true)
-    public List<CitaOpcionDTO> obtenerCitasDisponibles(Long historiaId) {
-        List<CitaOpcionDTO> resultado = new ArrayList<>();
-
-        // Citas CONFIRMADAS del paciente
-        citaRepo.findByHistoriaClinicaIdAndEstado(historiaId, Cita.EstadoCita.CONFIRMADA)
-            .forEach(c -> resultado.add(CitaOpcionDTO.builder()
-                .codigo(c.getNumeroCita())
-                .tipo("CITA")
-                .fecha(c.getFechaHoraCita())
-                .build()));
-
-        // Órdenes de emergencia PENDIENTES del paciente
-        ordenAtencionEmergenciaRepo
-            .findByHistoriaClinicaIdAndEstado(historiaId, OrdenAtencionEmergencia.EstadoOrden.PENDIENTE)
-            .forEach(o -> resultado.add(CitaOpcionDTO.builder()
-                .codigo(o.getNumeroOrden())
-                .tipo("EMERGENCIA")
-                .fecha(o.getCreatedAt())
-                .build()));
-
-        return resultado;
     }
 }

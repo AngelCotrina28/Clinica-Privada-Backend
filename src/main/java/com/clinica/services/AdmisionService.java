@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.UUID;
 import java.util.List;
 
 @Slf4j
@@ -41,6 +42,9 @@ public class AdmisionService {
 
         @Transactional(readOnly = true)
         public HistoriaClinicaResponseDTO buscarPorNumeroHistoria(String numeroHistoria) {
+                if (numeroHistoria == null || numeroHistoria.isBlank()) {
+                        throw new IllegalArgumentException("El numero de historia es obligatorio.");
+                }
                 return historiaRepo.findByNumeroHistoria(numeroHistoria.trim())
                                 .map(h -> toHistoriaDTO(h, false, false))
                                 .orElseThrow(() -> new RecursoNoEncontradoException(
@@ -158,27 +162,39 @@ public class AdmisionService {
         }
 
         private Trabajador getTrabajadorAutenticado() {
-                String username = SecurityContextHolder.getContext()
-                                .getAuthentication().getName();
+                var authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication == null || !authentication.isAuthenticated()
+                                || "anonymousUser".equals(authentication.getName())) {
+                        throw new IllegalStateException("No se pudo identificar al trabajador autenticado.");
+                }
+
+                String username = authentication.getName();
                 return trabajadorRepo.findByUsername(username)
                                 .orElseThrow(() -> new RecursoNoEncontradoException(
                                                 "Trabajador autenticado no encontrado: " + username));
         }
 
         private String generarNumeroHistoria() {
-                long total = historiaRepo.count();
-                return String.format("HC-%05d", total + 1);
+                String numeroHistoria;
+                do {
+                        numeroHistoria = "HC-" + tokenCorto();
+                } while (historiaRepo.existsByNumeroHistoria(numeroHistoria));
+                return numeroHistoria;
         }
 
         private String generarNumeroOrden() {
-                long correlativo = ordenRepo.count() + 1;
                 String numeroOrden;
-
                 do {
-                        numeroOrden = String.format("OE-%05d", correlativo++);
+                        numeroOrden = "OE-" + tokenCorto();
                 } while (ordenRepo.existsByNumeroOrden(numeroOrden));
-
                 return numeroOrden;
+        }
+
+        private String tokenCorto() {
+                return UUID.randomUUID().toString()
+                                .replace("-", "")
+                                .substring(0, 12)
+                                .toUpperCase();
         }
 
         private String normalizarDocumentoPaciente(String documento) {

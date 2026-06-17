@@ -1,16 +1,20 @@
 package com.clinica.controllers;
 
 import com.clinica.dtos.AtencionMedicaHistorialDTO;
+import com.clinica.dtos.AtencionMedicaRequestDTO;
 import com.clinica.dtos.CitaOpcionDTO;
 import com.clinica.services.AtencionMedicaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
+
 @RestController
 @RequestMapping("/api/atenciones")
 @RequiredArgsConstructor
@@ -27,9 +31,9 @@ public class AtencionMedicaController {
 
     @PostMapping("/registro")
     @PreAuthorize("hasAnyRole('MEDICO', 'ADMINISTRADOR')")
-    public ResponseEntity<Long> registrarAtencion(@RequestBody com.clinica.dtos.AtencionMedicaRequestDTO request) {
+    public ResponseEntity<Long> registrarAtencion(@Valid @RequestBody AtencionMedicaRequestDTO request) {
         Long idGenerado = atencionService.registrarAtencion(request);
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(idGenerado);
+        return ResponseEntity.status(HttpStatus.CREATED).body(idGenerado);
     }
 
     @GetMapping("/verificar-cita/{codigo}")

@@ -2,11 +2,16 @@
   {
     "name": "jwt.expiration",
     "type": "java.lang.String",
-    "description": "A description for 'jwt.expiration'"
+    "description": "JWT lifetime in milliseconds."
   },
   {
     "name": "jwt.secret",
     "type": "java.lang.String",
-    "description": "A description for 'jwt.secret'"
+    "description": "Base64-encoded secret used to sign JWT tokens."
+  },
+  {
+    "name": "app.cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed frontend origins."
   }
 ]}
