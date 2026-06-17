@@ -2,13 +2,11 @@ package com.clinica.model.repositories;
 
 import com.clinica.model.entities.Cita;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface CitaRepository extends JpaRepository<Cita, Long> {
 
         boolean existsByNumeroCita(String numeroCita);
