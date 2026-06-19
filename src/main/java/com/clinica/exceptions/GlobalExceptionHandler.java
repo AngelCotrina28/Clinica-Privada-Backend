@@ -5,11 +5,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -26,6 +32,47 @@ public class GlobalExceptionHandler {
             erroresCampos.put(fe.getField(), fe.getDefaultMessage());
         }
         return buildError(HttpStatus.BAD_REQUEST, "Error de validacion", erroresCampos);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleParametroFaltante(
+            MissingServletRequestParameterException ex) {
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "Falta el parametro requerido: " + ex.getParameterName(),
+                null);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTipoParametroInvalido(
+            MethodArgumentTypeMismatchException ex) {
+        String tipoEsperado = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "valido";
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "Parametro invalido: " + ex.getName() + " debe ser de tipo " + tipoEsperado,
+                null);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleBodyInvalido(HttpMessageNotReadableException ex) {
+        return buildError(HttpStatus.BAD_REQUEST, "El cuerpo de la solicitud es invalido o esta vacio.", null);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMetodoNoSoportado(
+            HttpRequestMethodNotSupportedException ex) {
+        return buildError(HttpStatus.METHOD_NOT_ALLOWED, "Metodo HTTP no soportado para este endpoint.", null);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMediaTypeNoSoportado(
+            HttpMediaTypeNotSupportedException ex) {
+        return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Tipo de contenido no soportado.", null);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleRutaNoEncontrada(NoResourceFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, "Endpoint no encontrado.", null);
     }
 
     @ExceptionHandler(CodigoDuplicadoException.class)

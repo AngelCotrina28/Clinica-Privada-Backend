@@ -7,7 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,13 +23,16 @@ import java.nio.charset.StandardCharsets;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final ObjectProvider<UserDetailsService> userDetailsServiceProvider;
+    private final UserDetailsService userDetailsService;
+    private final boolean requireAuthentication;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            ObjectProvider<UserDetailsService> userDetailsServiceProvider) {
+            UserDetailsService userDetailsService,
+            @Value("${app.security.require-auth}") boolean requireAuthentication) {
         this.jwtService = jwtService;
-        this.userDetailsServiceProvider = userDetailsServiceProvider;
+        this.userDetailsService = userDetailsService;
+        this.requireAuthentication = requireAuthentication;
     }
 
     @Override
@@ -51,7 +54,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtService.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetailsService userDetailsService = userDetailsServiceProvider.getObject();
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
@@ -67,9 +69,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (ExpiredJwtException e) {
             SecurityContextHolder.clearContext();
+            if (!requireAuthentication) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             escribirRespuestaNoAutorizada(response, "Token expirado", "TOKEN_EXPIRED");
         } catch (JwtException e) {
             SecurityContextHolder.clearContext();
+            if (!requireAuthentication) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             escribirRespuestaNoAutorizada(response, "Token invalido", "TOKEN_INVALID");
         }
     }

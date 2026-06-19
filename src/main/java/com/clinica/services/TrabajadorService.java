@@ -2,6 +2,8 @@ package com.clinica.services;
 
 import com.clinica.dtos.TrabajadorRequestDTO;
 import com.clinica.dtos.TrabajadorResponseDTO;
+import com.clinica.exceptions.CodigoDuplicadoException;
+import com.clinica.exceptions.RecursoNoEncontradoException;
 import com.clinica.model.entities.Especialidad;
 import com.clinica.model.entities.Rol;
 import com.clinica.model.entities.Trabajador;
@@ -40,17 +42,17 @@ public class TrabajadorService {
     @Transactional
     public TrabajadorResponseDTO crear(TrabajadorRequestDTO dto) {
         if (trabajadorRepository.existsByDni(dto.getDni())) {
-            throw new RuntimeException("El DNI ya está registrado");
+            throw new CodigoDuplicadoException("El DNI ya está registrado");
         }
         validarPasswordCreacion(dto.getPassword());
 
         Rol rol = rolRepository.findById(dto.getRolId())
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado"));
         IdentidadInstitucional identidad = generarIdentidadInstitucional(dto.getNombreCompleto(), null);
         
         if (rol.getNombre().equalsIgnoreCase("Medico")) {
             if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
-                throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
+                throw new IllegalArgumentException("El número de colegiatura es obligatorio para el rol Médico.");
             }
         }
 
@@ -80,19 +82,21 @@ public class TrabajadorService {
     @Transactional
     public void cambiarEstado(Long id) {
         Trabajador trabajador = trabajadorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Trabajador no encontrado"));
         
         trabajador.setActivo(!trabajador.isActivo()); 
         
         trabajadorRepository.save(trabajador);
     }
 
+    @Transactional(readOnly = true)
     public List<TrabajadorResponseDTO> listarTodos() {
         return trabajadorRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<TrabajadorResponseDTO> listarMedicosActivos() {
         return trabajadorRepository.findByRolNombreIgnoreCaseAndActivoTrue("MEDICO").stream()
                 .map(this::mapToDTO)
@@ -124,10 +128,10 @@ public class TrabajadorService {
     public TrabajadorResponseDTO actualizar(Long id, TrabajadorRequestDTO dto) {
 
         Trabajador trabajador = trabajadorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trabajador no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Trabajador no encontrado"));
 
         if (!trabajador.getDni().equals(dto.getDni()) && trabajadorRepository.existsByDniAndIdNot(dto.getDni(), id)) {
-            throw new RuntimeException("El DNI ya está registrado por otro trabajador");
+            throw new CodigoDuplicadoException("El DNI ya está registrado por otro trabajador");
         }
 
         IdentidadInstitucional identidad = generarIdentidadInstitucional(dto.getNombreCompleto(), id);
@@ -140,12 +144,12 @@ public class TrabajadorService {
         trabajador.setFechaNacimiento(dto.getFechaNacimiento());
         trabajador.setColegiatura(dto.getColegiatura());
         Rol rol = rolRepository.findById(dto.getRolId())
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado"));
         trabajador.setRol(rol);
 
         if (rol.getNombre().equalsIgnoreCase("Medico")) {
             if (dto.getColegiatura() == null || dto.getColegiatura().isBlank()) {
-                throw new RuntimeException("El número de colegiatura es obligatorio para el rol Médico.");
+                throw new IllegalArgumentException("El número de colegiatura es obligatorio para el rol Médico.");
             }
         }
 
@@ -158,10 +162,10 @@ public class TrabajadorService {
 
     private void validarPasswordCreacion(String password) {
         if (password == null || password.isBlank()) {
-            throw new RuntimeException("La contraseña es obligatoria");
+            throw new IllegalArgumentException("La contraseña es obligatoria");
         }
         if (password.length() < 6) {
-            throw new RuntimeException("La contraseña debe tener al menos 6 caracteres");
+            throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres");
         }
     }
 
@@ -213,7 +217,7 @@ public class TrabajadorService {
                 .toList();
 
         if (partes.size() < 2) {
-            throw new RuntimeException("Ingrese al menos un nombre y un apellido para generar el usuario institucional.");
+            throw new IllegalArgumentException("Ingrese al menos un nombre y un apellido para generar el usuario institucional.");
         }
 
         String inicialNombre = primeraLetra(partes.get(0));
@@ -254,7 +258,7 @@ public class TrabajadorService {
                 .collect(Collectors.joining());
 
         if (valor.isBlank()) {
-            throw new RuntimeException("No se pudo generar el usuario con el apellido ingresado.");
+            throw new IllegalArgumentException("No se pudo generar el usuario con el apellido ingresado.");
         }
 
         return new BloqueApellido(valor, indice);
@@ -276,7 +280,7 @@ public class TrabajadorService {
     private String primeraLetra(String valor) {
         String limpio = soloAlfanumerico(valor);
         if (limpio.isBlank()) {
-            throw new RuntimeException("No se pudo generar el usuario con el nombre ingresado.");
+            throw new IllegalArgumentException("No se pudo generar el usuario con el nombre ingresado.");
         }
         return limpio.substring(0, 1);
     }

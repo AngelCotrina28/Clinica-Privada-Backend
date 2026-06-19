@@ -13,5 +13,10 @@
     "name": "app.cors.allowed-origins",
     "type": "java.lang.String",
     "description": "Comma-separated list of allowed frontend origins."
+  },
+  {
+    "name": "app.security.require-auth",
+    "type": "java.lang.Boolean",
+    "description": "Enables JWT and method authorization for protected endpoints."
   }
 ]}
