@@ -19,4 +19,5 @@ public interface RecetaRepository extends JpaRepository<Receta, Long> {
     List<Receta> buscarPorNumeroRecetaODni(@Param("termino") String termino);
 
     Optional<Receta> findFirstByOrderByIdDesc();
+    boolean existsByNumeroReceta(String numeroReceta);
 }

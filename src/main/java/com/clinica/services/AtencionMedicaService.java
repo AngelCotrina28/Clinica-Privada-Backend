@@ -6,19 +6,26 @@ import com.clinica.dtos.CitaOpcionDTO;
 import com.clinica.exceptions.RecursoNoEncontradoException;
 import com.clinica.model.entities.AtencionMedica;
 import com.clinica.model.entities.Cita;
+import com.clinica.model.entities.DetalleReceta; 
 import com.clinica.model.entities.HistoriaClinica;
+import com.clinica.model.entities.Medicamento; 
 import com.clinica.model.entities.OrdenAtencionEmergencia;
+import com.clinica.model.entities.Receta; 
 import com.clinica.model.entities.Trabajador;
 import com.clinica.model.repositories.AtencionMedicaRepository;
 import com.clinica.model.repositories.CitaRepository;
 import com.clinica.model.repositories.HistoriaClinicaRepository;
+import com.clinica.model.repositories.MedicamentoRepository; 
 import com.clinica.model.repositories.OrdenAtencionEmergenciaRepository;
+import com.clinica.model.repositories.RecetaRepository; 
 import com.clinica.model.repositories.TrabajadorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter; 
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +38,10 @@ public class AtencionMedicaService {
     private final TrabajadorRepository trabajadorRepo;
     private final CitaRepository citaRepo;
     private final OrdenAtencionEmergenciaRepository ordenAtencionEmergenciaRepo;
+    
+    // Repositorios necesarios para crear recetas
+    private final MedicamentoRepository medicamentoRepo;
+    private final RecetaRepository recetaRepo;
 
     @Transactional(readOnly = true)
     public List<AtencionMedicaHistorialDTO> obtenerHistorialPorPaciente(Long historiaId) {
@@ -61,7 +72,42 @@ public class AtencionMedicaService {
             vincularCodigoAtencion(request.getNumeroCita().trim(), historia, medico, atencionBuilder);
         }
 
-        return atencionRepo.save(atencionBuilder.build()).getId();
+        // 1. Guardamos la atención y capturamos la entidad persistida
+        AtencionMedica atencionGuardada = atencionRepo.save(atencionBuilder.build());
+
+        // 2. Procesamos y guardamos la receta digital si se adjuntó
+        if (request.getItemsReceta() != null && !request.getItemsReceta().isEmpty()) {
+
+            Receta receta = Receta.builder()
+                    .numeroReceta(generarNumeroRecetaUnico())
+                    .atencionMedica(atencionGuardada)
+                    .medico(medico)
+                    .paciente(historia.getPaciente()) // ¡Solo hacemos esto! Es 100% seguro.
+                    .estado(Receta.EstadoReceta.EMITIDA)
+                    .fechaVencimiento(LocalDate.now().plusMonths(1))
+                    .build();
+
+            for (var itemDto : request.getItemsReceta()) {
+                Medicamento med = medicamentoRepo.findById(itemDto.getMedicamentoId())
+                        .orElseThrow(() -> new RecursoNoEncontradoException(
+                                "Medicamento no encontrado con ID: " + itemDto.getMedicamentoId()));
+
+                DetalleReceta detalle = DetalleReceta.builder()
+                        .receta(receta)
+                        .medicamento(med)
+                        .cantidadPrescrita(itemDto.getCantidad())
+                        .duracion(itemDto.getDias() + " días")
+                        .indicaciones(itemDto.getIndicaciones())
+                        .cantidadDespachada(0)
+                        .build();
+
+                receta.getDetalles().add(detalle);
+            }
+
+            recetaRepo.save(receta);
+        }
+
+        return atencionGuardada.getId();
     }
 
     @Transactional(readOnly = true)
@@ -158,7 +204,7 @@ public class AtencionMedicaService {
             throw new IllegalStateException("La orden no corresponde a la fecha actual.");
         }
         if (!orden.getHistoriaClinica().getId().equals(historia.getId())) {
-            throw new IllegalArgumentException("La orden no pertenece a la historia clinica indicada.");
+            throw new IllegalArgumentException("La orden no belongs a la historia clinica indicada.");
         }
         if (!orden.getMedico().getId().equals(medico.getId())) {
             throw new IllegalArgumentException("La orden no pertenece al medico indicado.");
@@ -215,5 +261,20 @@ public class AtencionMedicaService {
                 .diagnosticoSecundario(a.getDiagnosticoSecundario())
                 .tratamiento(a.getTratamiento())
                 .build();
+    }
+
+    private String generarNumeroRecetaUnico() {
+        String fechaParte = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int aleatorio = (int) (10000 + Math.random() * 90000);
+        String codigo = "REC-" + fechaParte + "-" + aleatorio;
+
+        int intentos = 0;
+        
+        while (recetaRepo.existsByNumeroReceta(codigo) && intentos < 5) {
+            aleatorio = (int) (10000 + Math.random() * 90000);
+            codigo = "REC-" + fechaParte + "-" + aleatorio;
+            intentos++;
+        }
+        return codigo;
     }
 }
