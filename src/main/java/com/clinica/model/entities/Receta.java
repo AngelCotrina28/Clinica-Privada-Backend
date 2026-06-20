@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "recetas")
@@ -48,4 +49,8 @@ public class Receta {
 
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
+
+    @OneToMany(mappedBy = "receta", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<DetalleReceta> detalles = new java.util.ArrayList<>();
 }
