@@ -10,6 +10,8 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -29,6 +31,11 @@ public class MedicamentoController {
 
         return ResponseEntity.ok(
                 service.buscar(nombre, codigo, categoriaId, soloActivos, pagina, tamano, ordenarPor));
+    }
+
+    @GetMapping("/medicamentos/todos")
+    public ResponseEntity<List<MedicamentoOpcionDTO>> listarTodos() {
+        return ResponseEntity.ok(service.listarTodosParaSeleccion());
     }
 
     @GetMapping("/medicamentos/{id}")

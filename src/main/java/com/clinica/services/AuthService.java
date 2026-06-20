@@ -72,6 +72,7 @@ public class AuthService {
                                 nombreRol);
 
                 return new AuthLoginResponseDTO(
+                                trabajador.getId(),
                                 token,
                                 trabajador.getUsername(),
                                 trabajador.getNombreCompleto(),

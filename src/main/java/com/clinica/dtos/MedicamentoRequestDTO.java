@@ -7,27 +7,25 @@ import java.math.BigDecimal;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class MedicamentoRequestDTO {
- 
-    @NotBlank(message = "El código es obligatorio")
     @Size(max = 30, message = "El código no puede superar 30 caracteres")
     private String codigo;
- 
+
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 200, message = "El nombre no puede superar 200 caracteres")
     private String nombre;
- 
+
     @Size(max = 200)
     private String nombreGenerico;
- 
+
     private String descripcion;
- 
+
     @NotNull(message = "La categoría es obligatoria")
     @Positive(message = "ID de categoría inválido")
     private Integer categoriaId;
- 
+
     @Size(max = 100)
     private String presentacion;
- 
+
     @Size(max = 150)
     private String laboratorio;
 
