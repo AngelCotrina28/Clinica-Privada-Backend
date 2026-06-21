@@ -142,9 +142,12 @@ public class MedicamentoService {
         auditarCambio(medicamento, "precio_unitario",
                 medicamento.getPrecioUnitario().toPlainString(),
                 dto.getPrecioUnitario().toPlainString());
-        auditarCambio(medicamento, "stock_actual",
-                String.valueOf(medicamento.getStockActual()),
-                String.valueOf(dto.getStockInicial()));
+        
+        // Se comenta o elimina la auditoría del stock en la edición principal 
+        // ya que ahora se gestiona a través de agregarStock()
+        // auditarCambio(medicamento, "stock_actual",
+        //         String.valueOf(medicamento.getStockActual()),
+        //         String.valueOf(dto.getStockInicial()));
 
         medicamento.setNombre(dto.getNombre());
         medicamento.setNombreGenerico(dto.getNombreGenerico());
@@ -153,13 +156,43 @@ public class MedicamentoService {
         medicamento.setPresentacion(dto.getPresentacion());
         medicamento.setLaboratorio(dto.getLaboratorio());
         medicamento.setPrecioUnitario(dto.getPrecioUnitario());
-        medicamento.setStockActual(dto.getStockInicial());
+        
+        // No actualizamos el stock actual aquí para evitar reseteos
+        // medicamento.setStockActual(dto.getStockInicial()); 
+        
         medicamento.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0);
         medicamento.setRequiereReceta(dto.isRequiereReceta());
         medicamento.setUpdatedBy(trabajadorActual);
 
         medicamento = medicamentoRepo.save(medicamento);
         log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), trabajadorActual.getUsername());
+        return mapper.toResponse(medicamento);
+    }
+
+    // NUEVO MÉTODO: Agregar Stock
+    @Transactional
+    public MedicamentoResponseDTO agregarStock(Long id, Integer cantidadIngresada) {
+        Medicamento medicamento = obtenerEntidad(id);
+
+        if (!medicamento.isActivo()) {
+            throw new MedicamentoInactivoException("No se puede ingresar stock a un medicamento inactivo.");
+        }
+
+        Trabajador trabajadorActual = getTrabajadorAutenticado();
+        Integer stockAnterior = medicamento.getStockActual();
+        Integer nuevoStock = stockAnterior + cantidadIngresada;
+
+        medicamento.setStockActual(nuevoStock);
+        medicamento.setUpdatedBy(trabajadorActual);
+
+        medicamento = medicamentoRepo.save(medicamento);
+
+        // Registramos el cambio específicamente
+        registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.EDICION,
+                "stock_actual", String.valueOf(stockAnterior), String.valueOf(nuevoStock));
+
+        log.info("Stock agregado al medicamento: {} (+{}) por {}", medicamento.getCodigo(), cantidadIngresada, trabajadorActual.getUsername());
+        
         return mapper.toResponse(medicamento);
     }
 

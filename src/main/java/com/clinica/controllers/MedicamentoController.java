@@ -83,6 +83,15 @@ public class MedicamentoController {
         return ResponseEntity.ok(service.activar(id));
     }
 
+    // Nuevo endpoint para ingresar stock
+    @PatchMapping("/medicamentos/{id}/stock")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<MedicamentoResponseDTO> agregarStock(
+            @PathVariable Long id,
+            @Valid @RequestBody AjusteStockRequestDTO request) {
+        return ResponseEntity.ok(service.agregarStock(id, request.getCantidad()));
+    }
+
     @GetMapping("/medicamentos/{id}/historial")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Page<?>> historial(
