@@ -13,13 +13,13 @@ public class ClinicaSystem {
 	public static void main(String[] args) {
 		Path currentDir = Path.of(System.getProperty("user.dir"));
 		Path dotenvDir = Files.exists(currentDir.resolve(".env"))
-			? currentDir
-			: currentDir.resolve("backend");
+				? currentDir
+				: currentDir.resolve("backend");
 
 		Dotenv dotenv = Dotenv.configure()
-			.directory(dotenvDir.toString())
-			.ignoreIfMissing()
-			.load();
+				.directory(dotenvDir.toString())
+				.ignoreIfMissing()
+				.load();
 
 		dotenv.entries().forEach(e -> {
 			if (System.getProperty(e.getKey()) == null && System.getenv(e.getKey()) == null) {
