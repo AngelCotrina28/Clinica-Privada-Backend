@@ -1,5 +1,6 @@
 package com.clinica.services;
 
+import com.clinica.dtos.MedicamentoOpcionDTO;
 import com.clinica.dtos.MedicamentoRequestDTO;
 import com.clinica.dtos.MedicamentoResponseDTO;
 import com.clinica.dtos.PageResponseDTO;
@@ -35,6 +36,7 @@ public class MedicamentoService {
 
     private static final int PAGE_SIZE_DEFAULT = 20;
     private static final int PAGE_SIZE_MAX = 100;
+    private static final String PREFIJO_CODIGO = "MED-";
     private static final Map<String, String> CAMPOS_ORDEN_MEDICAMENTO = Map.of(
             "codigo", "codigo",
             "nombre", "nombre",
@@ -79,18 +81,29 @@ public class MedicamentoService {
                 Sort.by("stockActual"));
         return PageResponseDTO.of(medicamentoRepo.findStockBajo(pageable).map(mapper::toResponse));
     }
+    
+    @Transactional(readOnly = true)
+    public List<MedicamentoOpcionDTO> listarTodosParaSeleccion() {
+        return medicamentoRepo.findAll(Sort.by("nombre")).stream()
+                .map(m -> MedicamentoOpcionDTO.builder()
+                        .id(m.getId())
+                        .nombre(m.getNombre())
+                        .activo(m.isActivo())
+                        .build())
+                .toList();
+    }
 
     @Transactional
     public MedicamentoResponseDTO registrar(MedicamentoRequestDTO dto) {
-        if (medicamentoRepo.existsByCodigo(dto.getCodigo())) {
-            throw new CodigoDuplicadoException("Ya existe un medicamento con el codigo: " + dto.getCodigo());
-        }
-
         CategoriaMedicamento categoria = obtenerCategoria(dto.getCategoriaId());
         Trabajador trabajadorActual = getTrabajadorAutenticado();
 
+        // El código ya no lo digita el usuario: se genera automáticamente
+        // y de forma única justo antes de persistir.
+        String codigoGenerado = generarCodigoUnico();
+
         Medicamento medicamento = Medicamento.builder()
-                .codigo(dto.getCodigo())
+                .codigo(codigoGenerado)
                 .nombre(dto.getNombre())
                 .nombreGenerico(dto.getNombreGenerico())
                 .descripcion(dto.getDescripcion())
@@ -122,20 +135,20 @@ public class MedicamentoService {
             throw new MedicamentoInactivoException("No se puede editar un medicamento inactivo.");
         }
 
-        if (medicamentoRepo.existsByCodigoAndIdNot(dto.getCodigo(), id)) {
-            throw new CodigoDuplicadoException("Ya existe otro medicamento con el codigo: " + dto.getCodigo());
-        }
-
+        // El código es inmutable una vez generado: se ignora cualquier
+        // valor de código que venga en el DTO de edición.
         Trabajador trabajadorActual = getTrabajadorAutenticado();
 
         auditarCambio(medicamento, "precio_unitario",
                 medicamento.getPrecioUnitario().toPlainString(),
                 dto.getPrecioUnitario().toPlainString());
-        auditarCambio(medicamento, "stock_actual",
-                String.valueOf(medicamento.getStockActual()),
-                String.valueOf(dto.getStockInicial()));
+        
+        // Se comenta o elimina la auditoría del stock en la edición principal 
+        // ya que ahora se gestiona a través de agregarStock()
+        // auditarCambio(medicamento, "stock_actual",
+        //         String.valueOf(medicamento.getStockActual()),
+        //         String.valueOf(dto.getStockInicial()));
 
-        medicamento.setCodigo(dto.getCodigo());
         medicamento.setNombre(dto.getNombre());
         medicamento.setNombreGenerico(dto.getNombreGenerico());
         medicamento.setDescripcion(dto.getDescripcion());
@@ -143,13 +156,43 @@ public class MedicamentoService {
         medicamento.setPresentacion(dto.getPresentacion());
         medicamento.setLaboratorio(dto.getLaboratorio());
         medicamento.setPrecioUnitario(dto.getPrecioUnitario());
-        medicamento.setStockActual(dto.getStockInicial());
+        
+        // No actualizamos el stock actual aquí para evitar reseteos
+        // medicamento.setStockActual(dto.getStockInicial()); 
+        
         medicamento.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 0);
         medicamento.setRequiereReceta(dto.isRequiereReceta());
         medicamento.setUpdatedBy(trabajadorActual);
 
         medicamento = medicamentoRepo.save(medicamento);
         log.info("Medicamento editado: {} por {}", medicamento.getCodigo(), trabajadorActual.getUsername());
+        return mapper.toResponse(medicamento);
+    }
+
+    // NUEVO MÉTODO: Agregar Stock
+    @Transactional
+    public MedicamentoResponseDTO agregarStock(Long id, Integer cantidadIngresada) {
+        Medicamento medicamento = obtenerEntidad(id);
+
+        if (!medicamento.isActivo()) {
+            throw new MedicamentoInactivoException("No se puede ingresar stock a un medicamento inactivo.");
+        }
+
+        Trabajador trabajadorActual = getTrabajadorAutenticado();
+        Integer stockAnterior = medicamento.getStockActual();
+        Integer nuevoStock = stockAnterior + cantidadIngresada;
+
+        medicamento.setStockActual(nuevoStock);
+        medicamento.setUpdatedBy(trabajadorActual);
+
+        medicamento = medicamentoRepo.save(medicamento);
+
+        // Registramos el cambio específicamente
+        registrarHistorial(medicamento, HistorialMedicamento.TipoOperacion.EDICION,
+                "stock_actual", String.valueOf(stockAnterior), String.valueOf(nuevoStock));
+
+        log.info("Stock agregado al medicamento: {} (+{}) por {}", medicamento.getCodigo(), cantidadIngresada, trabajadorActual.getUsername());
+        
         return mapper.toResponse(medicamento);
     }
 
@@ -209,6 +252,28 @@ public class MedicamentoService {
     private CategoriaMedicamento obtenerCategoria(Integer catId) {
         return categoriaRepo.findById(catId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Categoria no encontrada: " + catId));
+    }
+
+    /**
+     * Genera un código único con prefijo "MED-" seguido de un timestamp
+     * corto (los últimos dígitos de epoch millis). Reintenta en el rarísimo
+     * caso de colisión para garantizar unicidad antes de persistir.
+     */
+    private String generarCodigoUnico() {
+        String codigo;
+        int intentos = 0;
+        do {
+            String sufijo = String.valueOf(System.currentTimeMillis()).substring(
+                    String.valueOf(System.currentTimeMillis()).length() - 8);
+            codigo = PREFIJO_CODIGO + sufijo;
+            intentos++;
+        } while (medicamentoRepo.existsByCodigo(codigo) && intentos < 5);
+
+        if (medicamentoRepo.existsByCodigo(codigo)) {
+            throw new CodigoDuplicadoException(
+                    "No se pudo generar un código único para el medicamento, intente nuevamente.");
+        }
+        return codigo;
     }
 
     private Trabajador getTrabajadorAutenticado() {

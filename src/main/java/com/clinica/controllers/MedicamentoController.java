@@ -10,6 +10,8 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -29,6 +31,11 @@ public class MedicamentoController {
 
         return ResponseEntity.ok(
                 service.buscar(nombre, codigo, categoriaId, soloActivos, pagina, tamano, ordenarPor));
+    }
+
+    @GetMapping("/medicamentos/todos")
+    public ResponseEntity<List<MedicamentoOpcionDTO>> listarTodos() {
+        return ResponseEntity.ok(service.listarTodosParaSeleccion());
     }
 
     @GetMapping("/medicamentos/{id}")
@@ -74,6 +81,15 @@ public class MedicamentoController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<MedicamentoResponseDTO> activar(@PathVariable Long id) {
         return ResponseEntity.ok(service.activar(id));
+    }
+
+    // Nuevo endpoint para ingresar stock
+    @PatchMapping("/medicamentos/{id}/stock")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<MedicamentoResponseDTO> agregarStock(
+            @PathVariable Long id,
+            @Valid @RequestBody AjusteStockRequestDTO request) {
+        return ResponseEntity.ok(service.agregarStock(id, request.getCantidad()));
     }
 
     @GetMapping("/medicamentos/{id}/historial")
