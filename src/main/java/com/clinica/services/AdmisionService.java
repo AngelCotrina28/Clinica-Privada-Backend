@@ -29,6 +29,9 @@ public class AdmisionService {
         private final HistoriaClinicaRepository historiaRepo;
         private final OrdenAtencionEmergenciaRepository ordenRepo;
         private final TrabajadorRepository trabajadorRepo;
+        
+        // ¡IMPORTANTE! Inyectamos el repositorio del paciente
+        private final PacienteRepository pacienteRepo;
 
         @Transactional(readOnly = true)
         public HistoriaClinicaResponseDTO buscarPorDni(String dni) {
@@ -51,20 +54,29 @@ public class AdmisionService {
                                                 "No se encontró historia clínica con el número: " + numeroHistoria));
         }
 
+        // ¡AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL!
         @Transactional
         public HistoriaClinicaResponseDTO abrirHistoria(AbrirHistoriaClinicaRequestDTO dto) {
-
                 String dniNormalizado = normalizarDocumentoPaciente(dto.getDniPaciente());
 
                 if (historiaRepo.existsByDniPaciente(dniNormalizado)) {
-                        throw new IllegalStateException(
-                                        "Ya existe una historia clínica para el DNI: " + dniNormalizado +
-                                                        ". Use la opción 'Buscar Historia' para recuperarla.");
+                        throw new IllegalStateException("Ya existe historia para este DNI.");
                 }
+
+                Paciente paciente = pacienteRepo.findByDni(dniNormalizado)
+                .orElseGet(() -> {
+                        Paciente nuevoP = Paciente.builder()
+                                .dni(dniNormalizado)
+                                .nombreCompleto(dto.getNombreCompleto().trim())
+                                // ... mapea aquí los demás campos obligatorios
+                                .registradoPor(getTrabajadorAutenticado())
+                                .build();
+                        return pacienteRepo.save(nuevoP);
+                });
 
                 Trabajador autor = getTrabajadorAutenticado();
                 String numeroHistoria = generarNumeroHistoria();
-
+                
                 HistoriaClinica historia = HistoriaClinica.builder()
                                 .numeroHistoria(numeroHistoria)
                                 .dniPaciente(dniNormalizado)
@@ -75,6 +87,7 @@ public class AdmisionService {
                                 .genero(dto.getGenero())
                                 .direccion(dto.getDireccion())
                                 .creadoPor(autor)
+                                .paciente(paciente)
                                 .build();
 
                 historia = historiaRepo.save(historia);

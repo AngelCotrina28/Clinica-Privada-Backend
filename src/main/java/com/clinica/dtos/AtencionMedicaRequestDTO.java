@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Data
 @Builder
@@ -25,4 +26,6 @@ public class AtencionMedicaRequestDTO {
     private String diagnosticoPrincipal;
 
     private String notasEvolucion;
+
+    private List<ItemRecetaRequestDTO> itemsReceta;
 }
