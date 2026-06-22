@@ -1,0 +1,15 @@
+.git
+.github
+.mvn
+target
+build
+dist
+.env
+.env.*
+*.log
+*.tmp
+.idea
+.vscode
+*.iml
+HELP.md
+package-lock.json

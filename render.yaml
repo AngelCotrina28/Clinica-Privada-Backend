@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: clinica-privada-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: REQUIRE_AUTH
+        value: "true"
+      - key: DDL_AUTO
+        value: "validate"
+      - key: SHOW_SQL
+        value: "false"
+      - key: SPRINGDOC_ENABLED
+        value: "true"
