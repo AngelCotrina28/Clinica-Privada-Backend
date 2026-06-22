@@ -29,6 +29,7 @@ public class RecetaService {
     private final AtencionMedicaRepository atencionMedicaRepo;
     private final TrabajadorRepository trabajadorRepo;
     private final PacienteRepository pacienteRepo;
+    private final OrdenEntregaRepository ordenEntregaRepo;
 
     // ------------------------------------------------------------------
     // BUSQUEDA
@@ -130,6 +131,21 @@ public class RecetaService {
             throw new IllegalStateException("La receta no tiene medicamentos asociados para despachar.");
         }
 
+        // 1. EXTRAER AL TÉCNICO AUTENTICADO
+        String usernameAutenticado = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Trabajador tecnico = trabajadorRepo.findByUsername(usernameAutenticado)
+                .orElseThrow(() -> new IllegalStateException("No se pudo identificar al técnico autenticado en la base de datos."));
+
+        // 2. CREAR LA CABECERA DE LA ORDEN DE ENTREGA
+        OrdenEntrega ordenEntrega = OrdenEntrega.builder()
+                .numeroOrden(generarNumeroOrdenEntrega())
+                .receta(receta)
+                .tecnico(tecnico)
+                .build();
+
+        List<DetalleOrdenEntrega> detallesEntrega = new ArrayList<>();
+
+        // 3. PROCESAR EL STOCK Y CREAR LOS DETALLES DE LA ORDEN
         for (DetalleReceta detalle : detalles) {
             Medicamento medicamento = detalle.getMedicamento();
             int cantidadADescontar = detalle.getCantidadPrescrita();
@@ -141,16 +157,45 @@ public class RecetaService {
                                 + ", cantidad requerida: " + cantidadADescontar);
             }
 
+            // Descuento de inventario
             medicamento.setStockActual(medicamento.getStockActual() - cantidadADescontar);
             detalle.setCantidadDespachada(cantidadADescontar);
             medicamentoRepo.save(medicamento);
+
+            // Registrar el detalle logístico
+            detallesEntrega.add(DetalleOrdenEntrega.builder()
+                    .ordenEntrega(ordenEntrega)
+                    .medicamento(medicamento)
+                    .cantidadEntregada(cantidadADescontar)
+                    .build());
         }
 
+        // 4. GUARDAR LA ORDEN DE ENTREGA COMPLETA
+        ordenEntrega.setDetalles(detallesEntrega);
+        ordenEntregaRepo.save(ordenEntrega);
+
+        // 5. ACTUALIZAR LA RECETA CLÍNICA
         receta.setEstado(Receta.EstadoReceta.DESPACHADA);
         receta = recetaRepo.save(receta);
 
-        log.info("Receta despachada: {}", receta.getNumeroReceta());
+        log.info("Receta {} despachada exitosamente por el técnico {}. Orden generada: {}", 
+                 receta.getNumeroReceta(), tecnico.getUsername(), ordenEntrega.getNumeroOrden());
+                 
         return toResponseDTO(receta);
+    }
+
+    private String generarNumeroOrdenEntrega() {
+        Optional<OrdenEntrega> ultimaOrden = ordenEntregaRepo.findFirstByOrderByIdDesc();
+
+        int siguienteCorrelativo = 1;
+        if (ultimaOrden.isPresent()) {
+            String soloDigitos = ultimaOrden.get().getNumeroOrden().replaceAll("\\D+", "");
+            if (!soloDigitos.isBlank()) {
+                siguienteCorrelativo = Integer.parseInt(soloDigitos) + 1;
+            }
+        }
+
+        return "ENT-" + String.format("%06d", siguienteCorrelativo);
     }
     
     private Receta obtenerEntidad(Long id) {
