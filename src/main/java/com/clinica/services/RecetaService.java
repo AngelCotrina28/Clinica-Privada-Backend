@@ -30,6 +30,7 @@ public class RecetaService {
     private final TrabajadorRepository trabajadorRepo;
     private final PacienteRepository pacienteRepo;
     private final OrdenEntregaRepository ordenEntregaRepo;
+    private final DeudaService deudaService;
 
     // ------------------------------------------------------------------
     // BUSQUEDA
@@ -97,6 +98,7 @@ public class RecetaService {
         receta.setDetalles(detalles);
 
         receta = recetaRepo.save(receta);
+        deudaService.asegurarDeudaMedicina(receta, medico);
         log.info("Receta registrada: {} para paciente {}", receta.getNumeroReceta(), paciente.getDni());
 
         return toResponseDTO(receta);
@@ -135,6 +137,12 @@ public class RecetaService {
         String usernameAutenticado = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         Trabajador tecnico = trabajadorRepo.findByUsername(usernameAutenticado)
                 .orElseThrow(() -> new IllegalStateException("No se pudo identificar al técnico autenticado en la base de datos."));
+
+        deudaService.asegurarDeudaMedicina(receta, tecnico);
+        if (!deudaService.recetaEstaPagada(receta)) {
+            throw new IllegalStateException(
+                    "Debe cancelar en caja los gastos de medicina antes de recoger los medicamentos.");
+        }
 
         // 2. CREAR LA CABECERA DE LA ORDEN DE ENTREGA
         OrdenEntrega ordenEntrega = OrdenEntrega.builder()

@@ -54,6 +54,9 @@ class RecetaServiceTest {
     @Mock
     OrdenEntregaRepository ordenEntregaRepo;
 
+    @Mock
+    DeudaService deudaService;
+
     @InjectMocks
     RecetaService recetaService;
 
@@ -131,6 +134,7 @@ class RecetaServiceTest {
                 .id(10L)
                 .numeroOrden("ENT-000010")
                 .build()));
+        when(deudaService.recetaEstaPagada(receta)).thenReturn(true);
         when(ordenEntregaRepo.save(any(OrdenEntrega.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(recetaRepo.save(receta)).thenReturn(receta);
 
@@ -163,10 +167,24 @@ class RecetaServiceTest {
         when(recetaRepo.findById(1L)).thenReturn(Optional.of(receta));
         when(trabajadorRepo.findByUsername("tecnico")).thenReturn(Optional.of(TestFixtures.trabajador(50L, "tecnico", "FARMACIA", true)));
         when(ordenEntregaRepo.findFirstByOrderByIdDesc()).thenReturn(Optional.empty());
+        when(deudaService.recetaEstaPagada(receta)).thenReturn(true);
 
         assertThatThrownBy(() -> recetaService.despachar(1L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Stock insuficiente");
+    }
+
+    @Test
+    void despacharRecetaNoPagadaLanzaIllegalStateException() {
+        TestFixtures.autenticarComo("tecnico");
+        Receta receta = TestFixtures.receta(1L, Receta.EstadoReceta.EMITIDA, TestFixtures.medicamento(30L, 10), 3);
+        when(recetaRepo.findById(1L)).thenReturn(Optional.of(receta));
+        when(trabajadorRepo.findByUsername("tecnico")).thenReturn(Optional.of(TestFixtures.trabajador(50L, "tecnico", "FARMACIA", true)));
+        when(deudaService.recetaEstaPagada(receta)).thenReturn(false);
+
+        assertThatThrownBy(() -> recetaService.despachar(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cancelar en caja");
     }
 
     @Test

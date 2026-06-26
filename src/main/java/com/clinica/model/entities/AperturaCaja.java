@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class AperturaCaja {
 
     public enum EstadoCaja {
-        ABIERTA, CERRADA
+        ABIERTA, CUADRADA, CERRADA
     }
 
     @Id

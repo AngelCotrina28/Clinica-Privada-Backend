@@ -8,6 +8,7 @@ import com.clinica.exceptions.RecursoNoEncontradoException;
 import com.clinica.model.entities.*;
 import com.clinica.model.repositories.*;
 import com.clinica.services.CitaService;
+import com.clinica.services.DeudaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +40,7 @@ public class CitaServiceImpl implements CitaService {
     private final TrabajadorRepository trabajadorRepository;
     private final TipoCitaRepository tipoCitaRepository;
     private final TurnoRepository turnoRepository;
+    private final DeudaService deudaService;
 
     @Override
     @Transactional
@@ -93,10 +95,12 @@ public class CitaServiceImpl implements CitaService {
                 .fechaHoraCita(request.getFechaHora())
                 .motivoConsulta(request.getMotivoConsulta())
                 .creadoPor(creador)
-                .estado(Cita.EstadoCita.CONFIRMADA)
+                .estado(Cita.EstadoCita.PROGRAMADA)
                 .build();
 
-        return mapToResponseDTO(citaRepository.save(cita));
+        Cita citaGuardada = citaRepository.save(cita);
+        deudaService.asegurarDeudaCita(citaGuardada, creador);
+        return mapToResponseDTO(citaGuardada);
     }
 
     @Override
