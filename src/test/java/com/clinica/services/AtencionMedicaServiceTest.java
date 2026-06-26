@@ -59,6 +59,9 @@ class AtencionMedicaServiceTest {
     @Mock
     RecetaRepository recetaRepo;
 
+    @Mock
+    DeudaService deudaService;
+
     @InjectMocks
     AtencionMedicaService atencionService;
 
@@ -118,6 +121,7 @@ class AtencionMedicaServiceTest {
         verify(recetaRepo).save(recetaCaptor.capture());
         assertThat(recetaCaptor.getValue().getDetalles()).hasSize(1);
         assertThat(recetaCaptor.getValue().getEstado()).isEqualTo(Receta.EstadoReceta.EMITIDA);
+        verify(deudaService).asegurarDeudaMedicina(any(Receta.class), any(Trabajador.class));
     }
 
     @Test

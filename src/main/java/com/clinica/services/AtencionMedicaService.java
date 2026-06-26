@@ -42,6 +42,7 @@ public class AtencionMedicaService {
     // Repositorios necesarios para crear recetas
     private final MedicamentoRepository medicamentoRepo;
     private final RecetaRepository recetaRepo;
+    private final DeudaService deudaService;
 
     @Transactional(readOnly = true)
     public List<AtencionMedicaHistorialDTO> obtenerHistorialPorPaciente(Long historiaId) {
@@ -74,6 +75,9 @@ public class AtencionMedicaService {
 
         // 1. Guardamos la atención y capturamos la entidad persistida
         AtencionMedica atencionGuardada = atencionRepo.save(atencionBuilder.build());
+        if (atencionGuardada.getOrdenEmergencia() != null) {
+            deudaService.asegurarDeudaEmergencia(atencionGuardada.getOrdenEmergencia(), medico);
+        }
 
         // 2. Procesamos y guardamos la receta digital si se adjuntó
         if (request.getItemsReceta() != null && !request.getItemsReceta().isEmpty()) {
@@ -91,6 +95,9 @@ public class AtencionMedicaService {
                 Medicamento med = medicamentoRepo.findById(itemDto.getMedicamentoId())
                         .orElseThrow(() -> new RecursoNoEncontradoException(
                                 "Medicamento no encontrado con ID: " + itemDto.getMedicamentoId()));
+                if (!med.isActivo()) {
+                    throw new IllegalStateException("No se puede recetar un medicamento inactivo: " + med.getNombre());
+                }
 
                 DetalleReceta detalle = DetalleReceta.builder()
                         .receta(receta)
@@ -104,7 +111,8 @@ public class AtencionMedicaService {
                 receta.getDetalles().add(detalle);
             }
 
-            recetaRepo.save(receta);
+            Receta recetaGuardada = recetaRepo.save(receta);
+            deudaService.asegurarDeudaMedicina(recetaGuardada != null ? recetaGuardada : receta, medico);
         }
 
         return atencionGuardada.getId();

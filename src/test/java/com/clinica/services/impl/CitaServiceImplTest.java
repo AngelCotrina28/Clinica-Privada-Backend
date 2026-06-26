@@ -17,6 +17,7 @@ import com.clinica.model.repositories.PacienteRepository;
 import com.clinica.model.repositories.TipoCitaRepository;
 import com.clinica.model.repositories.TrabajadorRepository;
 import com.clinica.model.repositories.TurnoRepository;
+import com.clinica.services.DeudaService;
 import com.clinica.support.TestFixtures;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,9 @@ class CitaServiceImplTest {
     @Mock
     TurnoRepository turnoRepository;
 
+    @Mock
+    DeudaService deudaService;
+
     @InjectMocks
     CitaServiceImpl citaService;
 
@@ -70,7 +74,7 @@ class CitaServiceImplTest {
     }
 
     @Test
-    void programarCitaValidaGuardaCitaConfirmada() {
+    void programarCitaValidaGuardaCitaProgramadaYCreaDeuda() {
         TestFixtures.autenticarComo("admision");
         LocalDate fecha = LocalDate.now().plusDays(7);
         LocalDateTime fechaHora = LocalDateTime.of(fecha, LocalTime.of(9, 0));
@@ -97,12 +101,13 @@ class CitaServiceImplTest {
 
         CitaResponseDTO response = citaService.programarCita(TestFixtures.citaRequest(fechaHora, 5L));
 
-        assertThat(response.getEstado()).isEqualTo("CONFIRMADA");
+        assertThat(response.getEstado()).isEqualTo("PROGRAMADA");
         assertThat(response.getNombreMedico()).isEqualTo(medico.getNombreCompleto());
         ArgumentCaptor<Cita> captor = ArgumentCaptor.forClass(Cita.class);
         verify(citaRepository).save(captor.capture());
         assertThat(captor.getValue().getNumeroCita()).startsWith("CT-");
         assertThat(captor.getValue().getConsultorio()).isSameAs(consultorio);
+        verify(deudaService).asegurarDeudaCita(eq(captor.getValue()), any(Trabajador.class));
     }
 
     @Test
